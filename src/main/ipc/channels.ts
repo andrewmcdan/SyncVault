@@ -13,5 +13,13 @@ export const IPC_CHANNELS = {
   AWS_PROFILE_SET: "syncvault:aws:profile:set",
   GITHUB_TOKEN_SET: "syncvault:github:token:set",
   GITHUB_AUTH_STATUS: "syncvault:github:auth:status",
-  GITHUB_AUTH_CLEAR: "syncvault:github:auth:clear"
+  GITHUB_AUTH_CLEAR: "syncvault:github:auth:clear",
+  PULL_PROJECTS_LIST: "syncvault:pull:projects:list",
+  PULL_FILES_LIST: "syncvault:pull:files:list",
+  PULL_FILE_COMMIT: "syncvault:pull:file:commit",
+  SYNC_SETTINGS_GET: "syncvault:settings:sync:get",
+  SYNC_SETTINGS_SET: "syncvault:settings:sync:set",
+  CONFLICTS_LIST: "syncvault:conflicts:list",
+  CONFLICT_RESOLVE: "syncvault:conflicts:resolve",
+  OPEN_PATH: "syncvault:open-path"
 } as const;

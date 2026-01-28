@@ -33,6 +33,19 @@ export function findFileByProjectPath(
   return result;
 }
 
+export function findFileById(fileId: string): FileRecord | null {
+  const db = getDatabase() as Database;
+  const stmt = db.prepare("SELECT * FROM files WHERE id = ? LIMIT 1");
+  stmt.bind([fileId]);
+
+  let result: FileRecord | null = null;
+  if (stmt.step()) {
+    result = mapFile(stmt.getAsObject());
+  }
+  stmt.free();
+  return result;
+}
+
 export function createFile(input: FileInput): FileRecord {
   const db = getDatabase() as Database;
   const stmt = db.prepare(

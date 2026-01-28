@@ -4,6 +4,7 @@ import { addFileFromClipboard } from "../services/add-file";
 import { registerIpcHandlers } from "../ipc/handlers";
 import { showMainWindow } from "../windows/main-window";
 import { resolveAssetPath } from "../util/paths";
+import { startSyncEngine, stopSyncEngine } from "../services/sync/engine";
 
 let tray: Tray | null = null;
 
@@ -42,6 +43,7 @@ function registerAppHandlers(): void {
   });
 
   app.on("before-quit", () => {
+    void stopSyncEngine();
     closeDatabase();
     tray?.destroy();
     tray = null;
@@ -64,6 +66,7 @@ async function start(): Promise<void> {
   registerIpcHandlers();
   registerAppHandlers();
   createTray();
+  startSyncEngine();
 }
 
 const gotLock = app.requestSingleInstanceLock();

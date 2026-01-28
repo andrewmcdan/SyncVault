@@ -15,8 +15,10 @@ import {
 } from "../db/repositories/destinations";
 import { generateId, hashString } from "../util/hash";
 import { ensureDir, getDataRoot, toPosixPath } from "../util/paths";
-import { ensureLocalRepo } from "./git/repo-manager";
+import { checkoutMain, cloneRepo, commitAll, ensureLocalRepo, ensureRemote, pushWithToken } from "./git/repo-manager";
 import { runGit } from "./git/git-client";
+import { createPrivateRepo } from "./github/repo-service";
+import { getGitHubToken } from "./auth/github-auth";
 import { parseDotenv, isLikelySecretKey } from "./parser/dotenv";
 import { collectSecretKeys, renderTemplate } from "./parser/template";
 import { buildMapping, serializeMapping } from "./parser/mapping";
@@ -107,24 +109,29 @@ function ensureProject(localRepoRoot: string, awsRegion: string | null): Project
   });
 }
 
-function ensureProjectMetadataFile(project: ProjectRecord): void {
+
+function buildRepoName(localRepoRoot: string, originUrl: string | null): string {
+  const baseName = path.basename(localRepoRoot) || "project";
+  const hashSource = originUrl ? `${localRepoRoot}|${originUrl}` : localRepoRoot;
+  const shortHash = hashString(hashSource).slice(0, 8);
+  return `syncvault-${baseName}-${shortHash}`;
+}
+
+function writeProjectMetadata(project: ProjectRecord): void {
   if (!project.local_clone_path) return;
   const metaPath = path.join(project.local_clone_path, "syncvault", "project.json");
-  if (fs.existsSync(metaPath)) return;
   ensureDir(path.dirname(metaPath));
-  fs.writeFileSync(
-    metaPath,
-    JSON.stringify(
-      {
-        projectId: project.id,
-        localRepoRoot: project.local_repo_root,
-        createdAt: new Date().toISOString()
-      },
-      null,
-      2
-    ),
-    "utf8"
-  );
+  const payload = {
+    projectId: project.id,
+    displayName: project.display_name ?? path.basename(project.local_repo_root),
+    createdAt: new Date().toISOString(),
+    aws: {
+      region: project.aws_region ?? undefined,
+      secretId: project.aws_secret_id ?? undefined
+    },
+    templatesRoot: "templates"
+  };
+  fs.writeFileSync(metaPath, JSON.stringify(payload, null, 2), "utf8");
 }
 
 function gatherAllKeys(parsed: ReturnType<typeof parseDotenv>): string[] {
@@ -171,8 +178,47 @@ export async function addFileFromPath(
     throw new Error("Project local clone path is missing.");
   }
 
-  await ensureLocalRepo(project.local_clone_path);
-  ensureProjectMetadataFile(project);
+  const token = getGitHubToken();
+  if (!token) {
+    throw new Error("GitHub token is not configured. Set it in Settings.");
+  }
+
+  if (!project.github_repo) {
+    let originUrl: string | null = null;
+    try {
+      const originResult = await runGit(["config", "--get", "remote.origin.url"], repoRoot);
+      originUrl = originResult.stdout.trim() || null;
+    } catch {
+      originUrl = null;
+    }
+
+    const repoName = buildRepoName(repoRoot, originUrl);
+    const created = await createPrivateRepo(token, repoName);
+    updateProjectFields(project.id, {
+      github_owner: created.owner,
+      github_repo: created.name,
+      github_clone_url: created.cloneUrl
+    });
+    project.github_owner = created.owner;
+    project.github_repo = created.name;
+    project.github_clone_url = created.cloneUrl;
+    if (!project.aws_secret_id) {
+      const desiredSecretId = `syncvault/${created.owner}/${project.id}`;
+      updateProjectFields(project.id, { aws_secret_id: desiredSecretId });
+      project.aws_secret_id = desiredSecretId;
+    }
+    saveDatabase();
+  }
+
+  if (project.github_clone_url) {
+    await cloneRepo(project.github_clone_url, project.local_clone_path);
+    await ensureRemote(project.local_clone_path, project.github_clone_url);
+  } else {
+    await ensureLocalRepo(project.local_clone_path);
+  }
+
+  await checkoutMain(project.local_clone_path);
+  writeProjectMetadata(project);
 
   const content = fs.readFileSync(resolvedPath, "utf8");
   const parsed = parseDotenv(content);
@@ -221,6 +267,11 @@ export async function addFileFromPath(
       last_tool_write_at: null,
       is_enabled: 1
     });
+  }
+
+  await commitAll(project.local_clone_path, `SyncVault: add ${relativePosix}`);
+  if (project.github_owner && project.github_repo) {
+    await pushWithToken(project.local_clone_path, project.github_owner, project.github_repo, token);
   }
 
   saveDatabase();

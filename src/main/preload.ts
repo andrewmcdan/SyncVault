@@ -6,6 +6,11 @@ import type {
   AwsProfileInfo,
   AwsProfileSelection,
   GitHubTokenPayload,
+  PullFilePayload,
+  RemoteFileItem,
+  RemoteProjectItem,
+  ConflictListItem,
+  SyncSettings,
   LogEntry,
   SyncStatus
 } from "../shared/types";
@@ -46,7 +51,23 @@ const api = {
   getGitHubAuthStatus: (): Promise<{ isAuthenticated: boolean }> =>
     ipcRenderer.invoke(IPC_CHANNELS.GITHUB_AUTH_STATUS),
   clearGitHubAuth: (): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke(IPC_CHANNELS.GITHUB_AUTH_CLEAR)
+    ipcRenderer.invoke(IPC_CHANNELS.GITHUB_AUTH_CLEAR),
+  listPullProjects: (): Promise<RemoteProjectItem[]> =>
+    ipcRenderer.invoke(IPC_CHANNELS.PULL_PROJECTS_LIST),
+  listPullFiles: (owner: string, repo: string): Promise<RemoteFileItem[]> =>
+    ipcRenderer.invoke(IPC_CHANNELS.PULL_FILES_LIST, owner, repo),
+  pullFile: (payload: PullFilePayload): Promise<string> =>
+    ipcRenderer.invoke(IPC_CHANNELS.PULL_FILE_COMMIT, payload),
+  getSyncSettings: (): Promise<SyncSettings> =>
+    ipcRenderer.invoke(IPC_CHANNELS.SYNC_SETTINGS_GET),
+  setSyncSettings: (payload: Partial<SyncSettings>): Promise<SyncSettings> =>
+    ipcRenderer.invoke(IPC_CHANNELS.SYNC_SETTINGS_SET, payload),
+  listConflicts: (): Promise<ConflictListItem[]> =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONFLICTS_LIST),
+  resolveConflict: (conflictId: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONFLICT_RESOLVE, conflictId),
+  openPath: (filePath: string): Promise<string> =>
+    ipcRenderer.invoke(IPC_CHANNELS.OPEN_PATH, filePath)
 };
 
 contextBridge.exposeInMainWorld("syncvault", api);

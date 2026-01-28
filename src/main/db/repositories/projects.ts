@@ -35,6 +35,30 @@ export function findProjectByLocalRoot(localRepoRoot: string): ProjectRecord | n
   return result;
 }
 
+export function findProjectById(projectId: string): ProjectRecord | null {
+  const db = getDatabase() as Database;
+  const stmt = db.prepare("SELECT * FROM projects WHERE id = ? LIMIT 1");
+  stmt.bind([projectId]);
+
+  let result: ProjectRecord | null = null;
+  if (stmt.step()) {
+    result = mapProject(stmt.getAsObject());
+  }
+  stmt.free();
+  return result;
+}
+
+export function listProjects(): ProjectRecord[] {
+  const db = getDatabase() as Database;
+  const stmt = db.prepare("SELECT * FROM projects");
+  const results: ProjectRecord[] = [];
+  while (stmt.step()) {
+    results.push(mapProject(stmt.getAsObject()));
+  }
+  stmt.free();
+  return results;
+}
+
 export function createProject(input: ProjectInput): ProjectRecord {
   const db = getDatabase() as Database;
   const stmt = db.prepare(

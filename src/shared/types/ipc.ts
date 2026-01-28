@@ -49,3 +49,38 @@ export interface AwsProfileSelection {
 export interface GitHubTokenPayload {
   token: string;
 }
+
+export interface RemoteProjectItem {
+  owner: string;
+  repo: string;
+  cloneUrl: string;
+}
+
+export interface RemoteFileItem {
+  fileId: string;
+  templatePath: string;
+  mappingPath: string;
+}
+
+export interface PullFilePayload {
+  owner: string;
+  repo: string;
+  fileId: string;
+}
+
+export interface SyncSettings {
+  pollIntervalMs: number;
+  debounceMs: number;
+  loopWindowMs: number;
+  refreshIntervalMs: number;
+}
+
+export interface ConflictListItem {
+  id: string;
+  destinationId: string;
+  destinationPath: string;
+  localCopyPath: string | null;
+  remoteCopyPath: string | null;
+  status: string;
+  detectedAt: string | null;
+}

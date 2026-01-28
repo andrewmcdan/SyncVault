@@ -4,6 +4,11 @@ import type {
   AwsProfileInfo,
   AwsProfileSelection,
   GitHubTokenPayload,
+  PullFilePayload,
+  RemoteFileItem,
+  RemoteProjectItem,
+  ConflictListItem,
+  SyncSettings,
   LogEntry,
   SyncStatus
 } from "@shared/types";
@@ -24,6 +29,14 @@ declare global {
       setGitHubToken: (payload: GitHubTokenPayload) => Promise<{ ok: boolean }>;
       getGitHubAuthStatus: () => Promise<{ isAuthenticated: boolean }>;
       clearGitHubAuth: () => Promise<{ ok: boolean }>;
+      listPullProjects: () => Promise<RemoteProjectItem[]>;
+      listPullFiles: (owner: string, repo: string) => Promise<RemoteFileItem[]>;
+      pullFile: (payload: PullFilePayload) => Promise<string>;
+      getSyncSettings: () => Promise<SyncSettings>;
+      setSyncSettings: (payload: Partial<SyncSettings>) => Promise<SyncSettings>;
+      listConflicts: () => Promise<ConflictListItem[]>;
+      resolveConflict: (conflictId: string) => Promise<{ ok: boolean }>;
+      openPath: (filePath: string) => Promise<string>;
     };
   }
 }

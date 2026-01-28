@@ -1,16 +1,25 @@
-import { BrowserWindow, dialog, ipcMain, WebContents } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell, WebContents } from "electron";
 import { IPC_CHANNELS } from "../channels";
 import type {
   AddFileCommitPayload,
   AddFilePreviewResult,
   AwsProfileSelection,
+  ConflictListItem,
+  SyncSettings,
   GitHubTokenPayload,
+  PullFilePayload,
+  RemoteFileItem,
+  RemoteProjectItem,
   LogEntry,
   SyncStatus
 } from "../../../shared/types";
 import { parseDotenv, isLikelySecretKey } from "../../services/parser/dotenv";
 import { collectSecretKeys } from "../../services/parser/template";
 import { addFileFromPath } from "../../services/add-file";
+import { getSyncSettings, setSyncSettings } from "../../services/sync/settings";
+import { startSyncEngine, stopSyncEngine } from "../../services/sync/engine";
+import { listOpenConflicts, resolveConflict } from "../../db/repositories/conflicts";
+import { listRemoteFiles, listRemoteProjects, pullRemoteFile } from "../../services/pull-file";
 import {
   listAwsProfiles,
   getAwsSelection,
@@ -135,6 +144,49 @@ export function registerIpcHandlers(): void {
     clearGitHubToken();
     return { ok: true };
   });
+
+  ipcMain.handle(
+    IPC_CHANNELS.PULL_PROJECTS_LIST,
+    async (): Promise<RemoteProjectItem[]> => listRemoteProjects()
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.PULL_FILES_LIST,
+    async (_event, owner: string, repo: string): Promise<RemoteFileItem[]> =>
+      listRemoteFiles(owner, repo)
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.PULL_FILE_COMMIT,
+    async (_event, payload: PullFilePayload): Promise<string> =>
+      pullRemoteFile(payload.owner, payload.repo, payload.fileId)
+  );
+
+  ipcMain.handle(IPC_CHANNELS.SYNC_SETTINGS_GET, (): SyncSettings => getSyncSettings());
+  ipcMain.handle(IPC_CHANNELS.SYNC_SETTINGS_SET, async (_event, payload: Partial<SyncSettings>) => {
+    const next = setSyncSettings(payload);
+    await stopSyncEngine();
+    startSyncEngine();
+    return next;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CONFLICTS_LIST, (): ConflictListItem[] => {
+    return listOpenConflicts().map((conflict) => ({
+      id: conflict.id,
+      destinationId: conflict.destination_id,
+      destinationPath: conflict.destination_path,
+      localCopyPath: conflict.local_copy_path,
+      remoteCopyPath: conflict.remote_copy_path,
+      status: conflict.status,
+      detectedAt: conflict.detected_at
+    }));
+  });
+  ipcMain.handle(IPC_CHANNELS.CONFLICT_RESOLVE, (_event, conflictId: string) => {
+    resolveConflict(conflictId);
+    return { ok: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.OPEN_PATH, (_event, filePath: string) => shell.openPath(filePath));
 
   ipcMain.on(IPC_CHANNELS.STATUS_SUBSCRIBE, (event) => {
     addSubscriber(statusSubscribers, event.sender);

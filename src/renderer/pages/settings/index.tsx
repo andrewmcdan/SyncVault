@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AwsProfileInfo, AwsProfileSelection } from "@shared/types";
+import type { AwsProfileInfo, AwsProfileSelection, SyncSettings } from "@shared/types";
+
+const defaultSyncSettings: SyncSettings = {
+  pollIntervalMs: 20000,
+  debounceMs: 300,
+  loopWindowMs: 800,
+  refreshIntervalMs: 10000
+};
 
 export default function SettingsPage(): JSX.Element {
   const [profiles, setProfiles] = useState<AwsProfileInfo[]>([]);
@@ -9,6 +16,8 @@ export default function SettingsPage(): JSX.Element {
   const [githubStatus, setGithubStatus] = useState("");
   const [gitHubAuthed, setGitHubAuthed] = useState(false);
   const [awsStatus, setAwsStatus] = useState("");
+  const [syncStatus, setSyncStatus] = useState("");
+  const [syncSettings, setSyncSettingsState] = useState<SyncSettings>(defaultSyncSettings);
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
@@ -27,6 +36,8 @@ export default function SettingsPage(): JSX.Element {
       if (status) {
         setGitHubAuthed(status.isAuthenticated);
       }
+      const settings = await window.syncvault?.getSyncSettings?.();
+      if (settings) setSyncSettingsState(settings);
     };
     void load();
   }, []);
@@ -75,6 +86,20 @@ export default function SettingsPage(): JSX.Element {
     await window.syncvault?.clearGitHubAuth?.();
     setGitHubAuthed(false);
     setGithubStatus("GitHub token cleared.");
+  };
+
+  const handleSyncSave = async () => {
+    setIsBusy(true);
+    setSyncStatus("Saving sync settings...");
+    try {
+      const next = await window.syncvault?.setSyncSettings?.(syncSettings);
+      if (next) setSyncSettingsState(next);
+      setSyncStatus("Sync settings saved.");
+    } catch (error) {
+      setSyncStatus("Failed to save sync settings.");
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   return (
@@ -143,6 +168,72 @@ export default function SettingsPage(): JSX.Element {
         </div>
         {githubStatus && <p className="settings__status">{githubStatus}</p>}
         {gitHubAuthed && <p className="settings__status">GitHub is connected.</p>}
+      </div>
+
+      <div className="settings__section">
+        <h3>Sync settings</h3>
+        <div className="settings__row">
+          <label>
+            Remote poll interval (seconds)
+            <input
+              type="number"
+              min={5}
+              value={Math.round(syncSettings.pollIntervalMs / 1000)}
+              onChange={(event) =>
+                setSyncSettingsState((prev) => ({
+                  ...prev,
+                  pollIntervalMs: Number(event.target.value) * 1000
+                }))
+              }
+            />
+          </label>
+          <label>
+            Local debounce (ms)
+            <input
+              type="number"
+              min={50}
+              value={syncSettings.debounceMs}
+              onChange={(event) =>
+                setSyncSettingsState((prev) => ({
+                  ...prev,
+                  debounceMs: Number(event.target.value)
+                }))
+              }
+            />
+          </label>
+          <label>
+            Loop suppression window (ms)
+            <input
+              type="number"
+              min={100}
+              value={syncSettings.loopWindowMs}
+              onChange={(event) =>
+                setSyncSettingsState((prev) => ({
+                  ...prev,
+                  loopWindowMs: Number(event.target.value)
+                }))
+              }
+            />
+          </label>
+          <label>
+            Watch refresh interval (seconds)
+            <input
+              type="number"
+              min={5}
+              value={Math.round(syncSettings.refreshIntervalMs / 1000)}
+              onChange={(event) =>
+                setSyncSettingsState((prev) => ({
+                  ...prev,
+                  refreshIntervalMs: Number(event.target.value) * 1000
+                }))
+              }
+            />
+          </label>
+          <button type="button" onClick={handleSyncSave} disabled={isBusy}>
+            Save sync settings
+          </button>
+        </div>
+        {syncStatus && <p className="settings__status">{syncStatus}</p>}
       </div>
     </section>
   );
