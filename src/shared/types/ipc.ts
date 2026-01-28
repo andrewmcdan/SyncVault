@@ -56,6 +56,21 @@ export interface RemoteProjectItem {
   cloneUrl: string;
 }
 
+export interface ProjectListItem {
+  id: string;
+  displayName: string;
+  localRepoRoot: string;
+  localClonePath: string | null;
+  githubOwner: string | null;
+  githubRepo: string | null;
+  awsRegion: string | null;
+  awsSecretId: string | null;
+  fileCount: number;
+  destinationCount: number;
+  openConflicts: number;
+  createdAt: string | null;
+}
+
 export interface RemoteFileItem {
   fileId: string;
   templatePath: string;
@@ -82,5 +97,5 @@ export interface ConflictListItem {
   localCopyPath: string | null;
   remoteCopyPath: string | null;
   status: string;
-  detectedAt: string | null;
+  detectedAt: string;
 }

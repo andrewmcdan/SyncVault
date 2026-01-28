@@ -2,7 +2,7 @@ import { BrowserWindow, shell } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { resolveAppPath } from "../util/paths";
+import { resolveAppPath, resolveAssetPath } from "../util/paths";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -31,6 +31,12 @@ function getRendererBaseUrl(): string {
   return pathToFileURL(indexPath).toString();
 }
 
+function getWindowIcon(): string | undefined {
+  const filename = process.platform === "win32" ? "app.ico" : "icon.png";
+  const iconPath = resolveAssetPath("assets", "icons", filename);
+  return fs.existsSync(iconPath) ? iconPath : undefined;
+}
+
 async function loadWindow(route?: string): Promise<void> {
   if (!mainWindow) return;
   const baseUrl = getRendererBaseUrl();
@@ -51,6 +57,7 @@ export function showMainWindow(route?: string): void {
     height: 680,
     show: false,
     backgroundColor: "#f5f3ef",
+    icon: getWindowIcon(),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

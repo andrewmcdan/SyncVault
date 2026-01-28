@@ -8,6 +8,18 @@ const defaultSyncSettings: SyncSettings = {
   refreshIntervalMs: 10000
 };
 
+const syncLimits = {
+  pollIntervalSec: { min: 5, max: 3600 },
+  debounceMs: { min: 50, max: 5000 },
+  loopWindowMs: { min: 100, max: 10000 },
+  refreshIntervalSec: { min: 5, max: 300 }
+};
+
+function toNumber(value: string): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export default function SettingsPage(): JSX.Element {
   const [profiles, setProfiles] = useState<AwsProfileInfo[]>([]);
   const [selection, setSelection] = useState<AwsProfileSelection | null>(null);
@@ -43,6 +55,33 @@ export default function SettingsPage(): JSX.Element {
   }, []);
 
   const profileOptions = useMemo(() => profiles.map((p) => p.name), [profiles]);
+  const pollSeconds = Math.round(syncSettings.pollIntervalMs / 1000);
+  const refreshSeconds = Math.round(syncSettings.refreshIntervalMs / 1000);
+  const syncErrors = useMemo(() => {
+    return {
+      pollInterval:
+        pollSeconds < syncLimits.pollIntervalSec.min ||
+        pollSeconds > syncLimits.pollIntervalSec.max
+          ? `Enter ${syncLimits.pollIntervalSec.min}-${syncLimits.pollIntervalSec.max} seconds.`
+          : "",
+      debounce:
+        syncSettings.debounceMs < syncLimits.debounceMs.min ||
+        syncSettings.debounceMs > syncLimits.debounceMs.max
+          ? `Enter ${syncLimits.debounceMs.min}-${syncLimits.debounceMs.max} ms.`
+          : "",
+      loopWindow:
+        syncSettings.loopWindowMs < syncLimits.loopWindowMs.min ||
+        syncSettings.loopWindowMs > syncLimits.loopWindowMs.max
+          ? `Enter ${syncLimits.loopWindowMs.min}-${syncLimits.loopWindowMs.max} ms.`
+          : "",
+      refreshInterval:
+        refreshSeconds < syncLimits.refreshIntervalSec.min ||
+        refreshSeconds > syncLimits.refreshIntervalSec.max
+          ? `Enter ${syncLimits.refreshIntervalSec.min}-${syncLimits.refreshIntervalSec.max} seconds.`
+          : ""
+    };
+  }, [pollSeconds, refreshSeconds, syncSettings.debounceMs, syncSettings.loopWindowMs]);
+  const hasSyncErrors = Object.values(syncErrors).some(Boolean);
 
   const handleAwsSave = async () => {
     if (!selection?.profile) {
@@ -89,6 +128,10 @@ export default function SettingsPage(): JSX.Element {
   };
 
   const handleSyncSave = async () => {
+    if (hasSyncErrors) {
+      setSyncStatus("Fix validation errors before saving.");
+      return;
+    }
     setIsBusy(true);
     setSyncStatus("Saving sync settings...");
     try {
@@ -177,59 +220,77 @@ export default function SettingsPage(): JSX.Element {
             Remote poll interval (seconds)
             <input
               type="number"
-              min={5}
-              value={Math.round(syncSettings.pollIntervalMs / 1000)}
+              min={syncLimits.pollIntervalSec.min}
+              max={syncLimits.pollIntervalSec.max}
+              value={pollSeconds}
+              className={syncErrors.pollInterval ? "is-invalid" : ""}
               onChange={(event) =>
                 setSyncSettingsState((prev) => ({
                   ...prev,
-                  pollIntervalMs: Number(event.target.value) * 1000
+                  pollIntervalMs: toNumber(event.target.value) * 1000
                 }))
               }
             />
+            {syncErrors.pollInterval && (
+              <span className="settings__error">{syncErrors.pollInterval}</span>
+            )}
           </label>
           <label>
             Local debounce (ms)
             <input
               type="number"
-              min={50}
+              min={syncLimits.debounceMs.min}
+              max={syncLimits.debounceMs.max}
               value={syncSettings.debounceMs}
+              className={syncErrors.debounce ? "is-invalid" : ""}
               onChange={(event) =>
                 setSyncSettingsState((prev) => ({
                   ...prev,
-                  debounceMs: Number(event.target.value)
+                  debounceMs: toNumber(event.target.value)
                 }))
               }
             />
+            {syncErrors.debounce && <span className="settings__error">{syncErrors.debounce}</span>}
           </label>
           <label>
             Loop suppression window (ms)
             <input
               type="number"
-              min={100}
+              min={syncLimits.loopWindowMs.min}
+              max={syncLimits.loopWindowMs.max}
               value={syncSettings.loopWindowMs}
+              className={syncErrors.loopWindow ? "is-invalid" : ""}
               onChange={(event) =>
                 setSyncSettingsState((prev) => ({
                   ...prev,
-                  loopWindowMs: Number(event.target.value)
+                  loopWindowMs: toNumber(event.target.value)
                 }))
               }
             />
+            {syncErrors.loopWindow && (
+              <span className="settings__error">{syncErrors.loopWindow}</span>
+            )}
           </label>
           <label>
             Watch refresh interval (seconds)
             <input
               type="number"
-              min={5}
-              value={Math.round(syncSettings.refreshIntervalMs / 1000)}
+              min={syncLimits.refreshIntervalSec.min}
+              max={syncLimits.refreshIntervalSec.max}
+              value={refreshSeconds}
+              className={syncErrors.refreshInterval ? "is-invalid" : ""}
               onChange={(event) =>
                 setSyncSettingsState((prev) => ({
                   ...prev,
-                  refreshIntervalMs: Number(event.target.value) * 1000
+                  refreshIntervalMs: toNumber(event.target.value) * 1000
                 }))
               }
             />
+            {syncErrors.refreshInterval && (
+              <span className="settings__error">{syncErrors.refreshInterval}</span>
+            )}
           </label>
-          <button type="button" onClick={handleSyncSave} disabled={isBusy}>
+          <button type="button" onClick={handleSyncSave} disabled={isBusy || hasSyncErrors}>
             Save sync settings
           </button>
         </div>

@@ -59,6 +59,62 @@ export function listProjects(): ProjectRecord[] {
   return results;
 }
 
+export interface ProjectSummary {
+  id: string;
+  local_repo_root: string;
+  display_name: string | null;
+  github_owner: string | null;
+  github_repo: string | null;
+  github_clone_url: string | null;
+  local_clone_path: string | null;
+  aws_region: string | null;
+  aws_secret_id: string | null;
+  poll_interval_seconds: number;
+  last_remote_head: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  file_count: number;
+  destination_count: number;
+  open_conflicts: number;
+}
+
+export function listProjectSummaries(): ProjectSummary[] {
+  const db = getDatabase() as Database;
+  const stmt = db.prepare(
+    "SELECT p.*, " +
+      "(SELECT COUNT(*) FROM files f WHERE f.project_id = p.id) AS file_count, " +
+      "(SELECT COUNT(*) FROM destinations d JOIN files f ON f.id = d.file_id " +
+      "WHERE f.project_id = p.id AND d.is_enabled = 1) AS destination_count, " +
+      "(SELECT COUNT(*) FROM conflicts c JOIN destinations d ON d.id = c.destination_id " +
+      "JOIN files f ON f.id = d.file_id WHERE f.project_id = p.id AND c.status = 'open') AS open_conflicts " +
+      "FROM projects p"
+  );
+  const results: ProjectSummary[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as Record<string, SqlValue>;
+    results.push({
+      id: row.id as string,
+      local_repo_root: row.local_repo_root as string,
+      display_name: (row.display_name as string) ?? null,
+      github_owner: (row.github_owner as string) ?? null,
+      github_repo: (row.github_repo as string) ?? null,
+      github_clone_url: (row.github_clone_url as string) ?? null,
+      local_clone_path: (row.local_clone_path as string) ?? null,
+      aws_region: (row.aws_region as string) ?? null,
+      aws_secret_id: (row.aws_secret_id as string) ?? null,
+      poll_interval_seconds: row.poll_interval_seconds as number,
+      last_remote_head: (row.last_remote_head as string) ?? null,
+      created_at: (row.created_at as string) ?? null,
+      updated_at: (row.updated_at as string) ?? null,
+      file_count: Number(row.file_count ?? 0),
+      destination_count: Number(row.destination_count ?? 0),
+      open_conflicts: Number(row.open_conflicts ?? 0)
+    });
+  }
+  stmt.free();
+  return results;
+}
+
 export function createProject(input: ProjectInput): ProjectRecord {
   const db = getDatabase() as Database;
   const stmt = db.prepare(

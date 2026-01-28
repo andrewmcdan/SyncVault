@@ -7,6 +7,7 @@ import type {
   PullFilePayload,
   RemoteFileItem,
   RemoteProjectItem,
+  ProjectListItem,
   ConflictListItem,
   SyncSettings,
   LogEntry,
@@ -32,10 +33,14 @@ declare global {
       listPullProjects: () => Promise<RemoteProjectItem[]>;
       listPullFiles: (owner: string, repo: string) => Promise<RemoteFileItem[]>;
       pullFile: (payload: PullFilePayload) => Promise<string>;
+      listProjects: () => Promise<ProjectListItem[]>;
       getSyncSettings: () => Promise<SyncSettings>;
       setSyncSettings: (payload: Partial<SyncSettings>) => Promise<SyncSettings>;
       listConflicts: () => Promise<ConflictListItem[]>;
       resolveConflict: (conflictId: string) => Promise<{ ok: boolean }>;
+      resolveConflictKeepLocal: (conflictId: string) => Promise<{ ok: boolean }>;
+      resolveConflictKeepRemote: (conflictId: string) => Promise<{ ok: boolean }>;
+      openDiff: (localPath: string, remotePath: string) => Promise<string>;
       openPath: (filePath: string) => Promise<string>;
     };
   }

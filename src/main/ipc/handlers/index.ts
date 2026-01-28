@@ -5,6 +5,7 @@ import type {
   AddFilePreviewResult,
   AwsProfileSelection,
   ConflictListItem,
+  ProjectListItem,
   SyncSettings,
   GitHubTokenPayload,
   PullFilePayload,
@@ -15,10 +16,17 @@ import type {
 } from "../../../shared/types";
 import { parseDotenv, isLikelySecretKey } from "../../services/parser/dotenv";
 import { collectSecretKeys } from "../../services/parser/template";
+import path from "node:path";
 import { addFileFromPath } from "../../services/add-file";
 import { getSyncSettings, setSyncSettings } from "../../services/sync/settings";
 import { startSyncEngine, stopSyncEngine } from "../../services/sync/engine";
 import { listOpenConflicts, resolveConflict } from "../../db/repositories/conflicts";
+import { openDiff } from "../../services/conflicts/open-diff";
+import { listProjectSummaries } from "../../db/repositories/projects";
+import {
+  resolveConflictKeepLocal,
+  resolveConflictKeepRemote
+} from "../../services/conflicts/resolve-conflict";
 import { listRemoteFiles, listRemoteProjects, pullRemoteFile } from "../../services/pull-file";
 import {
   listAwsProfiles,
@@ -162,6 +170,23 @@ export function registerIpcHandlers(): void {
       pullRemoteFile(payload.owner, payload.repo, payload.fileId)
   );
 
+  ipcMain.handle(IPC_CHANNELS.PROJECTS_LIST, (): ProjectListItem[] => {
+    return listProjectSummaries().map((project) => ({
+      id: project.id,
+      displayName: project.display_name ?? path.basename(project.local_repo_root),
+      localRepoRoot: project.local_repo_root,
+      localClonePath: project.local_clone_path,
+      githubOwner: project.github_owner,
+      githubRepo: project.github_repo,
+      awsRegion: project.aws_region,
+      awsSecretId: project.aws_secret_id,
+      fileCount: project.file_count,
+      destinationCount: project.destination_count,
+      openConflicts: project.open_conflicts,
+      createdAt: project.created_at
+    }));
+  });
+
   ipcMain.handle(IPC_CHANNELS.SYNC_SETTINGS_GET, (): SyncSettings => getSyncSettings());
   ipcMain.handle(IPC_CHANNELS.SYNC_SETTINGS_SET, async (_event, payload: Partial<SyncSettings>) => {
     const next = setSyncSettings(payload);
@@ -185,6 +210,18 @@ export function registerIpcHandlers(): void {
     resolveConflict(conflictId);
     return { ok: true };
   });
+  ipcMain.handle(IPC_CHANNELS.CONFLICT_RESOLVE_LOCAL, async (_event, conflictId: string) => {
+    await resolveConflictKeepLocal(conflictId);
+    return { ok: true };
+  });
+  ipcMain.handle(IPC_CHANNELS.CONFLICT_RESOLVE_REMOTE, async (_event, conflictId: string) => {
+    await resolveConflictKeepRemote(conflictId);
+    return { ok: true };
+  });
+  ipcMain.handle(
+    IPC_CHANNELS.CONFLICTS_OPEN_DIFF,
+    async (_event, localPath: string, remotePath: string) => openDiff(localPath, remotePath)
+  );
 
   ipcMain.handle(IPC_CHANNELS.OPEN_PATH, (_event, filePath: string) => shell.openPath(filePath));
 

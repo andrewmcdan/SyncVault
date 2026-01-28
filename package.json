@@ -46,5 +46,7 @@
     "vitest": "^1.0.0",
     "wait-on": "^7.0.1",
     "@types/sql.js": "^1.4.6"
-  }
+  },
+  "author": "Andrew McDaniel <andrew@a-mcd.com> (https://a-mcd.com/)"
+
 }

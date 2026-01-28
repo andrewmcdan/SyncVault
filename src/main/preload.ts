@@ -9,6 +9,7 @@ import type {
   PullFilePayload,
   RemoteFileItem,
   RemoteProjectItem,
+  ProjectListItem,
   ConflictListItem,
   SyncSettings,
   LogEntry,
@@ -58,6 +59,8 @@ const api = {
     ipcRenderer.invoke(IPC_CHANNELS.PULL_FILES_LIST, owner, repo),
   pullFile: (payload: PullFilePayload): Promise<string> =>
     ipcRenderer.invoke(IPC_CHANNELS.PULL_FILE_COMMIT, payload),
+  listProjects: (): Promise<ProjectListItem[]> =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_LIST),
   getSyncSettings: (): Promise<SyncSettings> =>
     ipcRenderer.invoke(IPC_CHANNELS.SYNC_SETTINGS_GET),
   setSyncSettings: (payload: Partial<SyncSettings>): Promise<SyncSettings> =>
@@ -66,6 +69,12 @@ const api = {
     ipcRenderer.invoke(IPC_CHANNELS.CONFLICTS_LIST),
   resolveConflict: (conflictId: string): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC_CHANNELS.CONFLICT_RESOLVE, conflictId),
+  resolveConflictKeepLocal: (conflictId: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONFLICT_RESOLVE_LOCAL, conflictId),
+  resolveConflictKeepRemote: (conflictId: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONFLICT_RESOLVE_REMOTE, conflictId),
+  openDiff: (localPath: string, remotePath: string): Promise<string> =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONFLICTS_OPEN_DIFF, localPath, remotePath),
   openPath: (filePath: string): Promise<string> =>
     ipcRenderer.invoke(IPC_CHANNELS.OPEN_PATH, filePath)
 };

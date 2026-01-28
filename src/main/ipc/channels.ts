@@ -17,9 +17,13 @@ export const IPC_CHANNELS = {
   PULL_PROJECTS_LIST: "syncvault:pull:projects:list",
   PULL_FILES_LIST: "syncvault:pull:files:list",
   PULL_FILE_COMMIT: "syncvault:pull:file:commit",
+  PROJECTS_LIST: "syncvault:projects:list",
   SYNC_SETTINGS_GET: "syncvault:settings:sync:get",
   SYNC_SETTINGS_SET: "syncvault:settings:sync:set",
   CONFLICTS_LIST: "syncvault:conflicts:list",
   CONFLICT_RESOLVE: "syncvault:conflicts:resolve",
+  CONFLICT_RESOLVE_LOCAL: "syncvault:conflicts:resolve:local",
+  CONFLICT_RESOLVE_REMOTE: "syncvault:conflicts:resolve:remote",
+  CONFLICTS_OPEN_DIFF: "syncvault:conflicts:open-diff",
   OPEN_PATH: "syncvault:open-path"
 } as const;
