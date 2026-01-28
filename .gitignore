@@ -1,0 +1,45 @@
+# Node/Electron deps
+node_modules/
+
+# Build outputs
+/dist/
+/out/
+/release/
+
+# Logs
+logs/
+*.log
+
+# Local env files
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Coverage
+coverage/
+
+# Caches
+.cache/
+.eslintcache
+*.tsbuildinfo
+
+# SQLite/local DBs
+*.sqlite
+*.sqlite3
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor configs
+.vscode/
+.idea/
+
+# Temp files
+*.swp
+*.swo
+tmp/
+temp/
+aws/
