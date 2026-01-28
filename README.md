@@ -3,7 +3,7 @@
 SyncVault is a cross-platform tray app that keeps local config files in sync across machines while keeping secrets out of Git. Templates live in a private GitHub repo; secret values live in AWS Secrets Manager. The app renders plaintext locally, monitors changes, and keeps both sides synchronized.
 
 ## Status
-Early scaffolding. Core flows and UI are not yet implemented.
+MVP flows are implemented and usable. Core screens and background sync are in place.
 
 ## Core ideas
 - Template files in GitHub with placeholders instead of secrets.
@@ -26,8 +26,8 @@ Early scaffolding. Core flows and UI are not yet implemented.
 Requirements:
 - Node.js (LTS recommended)
 - Git
-- AWS credentials (for Secrets Manager)
-- GitHub token (for repo creation and access)
+- AWS credentials (for Secrets Manager). Profiles are read from `~/.aws/config` and `~/.aws/credentials`.
+- GitHub fine-grained PAT (for repo creation and access)
 
 Scripts:
 - `npm run dev`: run main watcher, renderer dev server, and Electron
@@ -48,20 +48,27 @@ If you see the SUID sandbox error, you can either:
 
 ## IPC
 Renderer access is via a preload bridge (contextIsolation on).
-- Status + logs are exposed through `window.syncvault`.
+- All UI actions (add/pull files, settings, conflicts, logs) are exposed through `window.syncvault`.
 
 ## Data storage
-- SQLite DB stored in the app data directory (`app.getPath("userData")/data`).
-- Clones of template repos stored under the same data root (planned).
+- SQLite (sql.js) DB stored in the app data directory (`app.getPath("userData")/data/syncvault.sqlite`).
+- Clones of template repos stored under the same data root (`app.getPath("userData")/data/repos`).
 - No secret values stored in the DB.
 
 ## Security notes
 - Secrets are never written to Git.
 - Secrets are never logged.
-- AWS and GitHub credentials are stored via OS keychain (planned).
+- GitHub PAT and AWS profile selection are stored in SQLite settings (no keychain yet).
+
+## Features implemented
+- Add file wizard with line-based secret selection and template preview.
+- Pull file browser that renders templates with AWS secrets.
+- Background sync (local watcher + remote poller) with conflict detection.
+- Conflicts UI with keep-local/keep-remote resolution and open diff.
+- Settings for GitHub PAT, AWS profile/region, and sync timing.
+- Projects and logs views.
 
 ## Roadmap (high level)
-1. CLI prototype for templating + sync engine
-2. Electron tray MVP with SQLite persistence
-3. Conflict UI + logs
-4. Auth improvements (GitHub OAuth, AWS profile UI)
+1. Tray MVP polish (pause syncing, richer project details)
+2. Keychain storage for PAT
+3. Auth improvements (GitHub OAuth device flow)
