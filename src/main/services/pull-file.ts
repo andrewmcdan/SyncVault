@@ -108,7 +108,7 @@ export async function listRemoteFiles(owner: string, repo: string): Promise<Remo
   if (!token && shouldUseGitHubTokenForGit()) {
     throw new Error("GitHub token not configured.");
   }
-  const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
+  const gitToken = shouldUseGitHubTokenForGit() ? token ?? undefined : undefined;
   const clonePath = getProjectClonePath(owner, repo);
   const remoteUrl = `https://github.com/${owner}/${repo}.git`;
   await cloneRepo(remoteUrl, clonePath, gitToken);
@@ -146,7 +146,7 @@ export async function pullRemoteFile(
   if (!token && shouldUseGitHubTokenForGit()) {
     throw new Error("GitHub token not configured.");
   }
-  const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
+  const gitToken = shouldUseGitHubTokenForGit() ? token ?? undefined : undefined;
 
   const clonePath = getProjectClonePath(owner, repo);
   const remoteUrl = `https://github.com/${owner}/${repo}.git`;
