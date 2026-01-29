@@ -5,6 +5,7 @@ asar: true
 files:
   - "dist/**"
   - "package.json"
+  - "assets/**"
   - "!**/*.map"
   - "!**/tests/**"
 
