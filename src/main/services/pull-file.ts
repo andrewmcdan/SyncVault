@@ -9,6 +9,7 @@ import {
   createProject,
   findProjectById,
   findProjectByLocalRoot,
+  listProjects,
   updateProjectFields
 } from "../db/repositories/projects";
 import { generateId, hashString } from "../util/hash";
@@ -93,14 +94,26 @@ function renderTemplate(template: string, secrets: Record<string, string>): stri
 
 export async function listRemoteProjects(): Promise<RemoteProjectItem[]> {
   const apiToken = await getGitHubApiToken();
-  if (!apiToken) {
-    if (getGitHubAuthMode() === "native") {
-      return [];
-    }
-    throw new Error("GitHub token not configured.");
+  if (apiToken) {
+    const repos = await listSyncVaultRepos(apiToken);
+    return repos.map((repo) => ({
+      owner: repo.owner,
+      repo: repo.name,
+      cloneUrl: repo.cloneUrl
+    }));
   }
-  const repos = await listSyncVaultRepos(apiToken);
-  return repos.map((repo) => ({ owner: repo.owner, repo: repo.name, cloneUrl: repo.cloneUrl }));
+
+  if (getGitHubAuthMode() === "native") {
+    return listProjects()
+      .filter((project) => project.github_owner && project.github_repo && project.github_clone_url)
+      .map((project) => ({
+        owner: project.github_owner as string,
+        repo: project.github_repo as string,
+        cloneUrl: project.github_clone_url as string
+      }));
+  }
+
+  throw new Error("GitHub token not configured.");
 }
 
 export async function listRemoteFiles(owner: string, repo: string): Promise<RemoteFileItem[]> {
