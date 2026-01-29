@@ -10,8 +10,8 @@ import {
   updateDestinationFields
 } from "../../db/repositories/destinations";
 import { hashString } from "../../util/hash";
-import { parseDotenv } from "../parser/dotenv";
-import { renderTemplate } from "../parser/template";
+import { parseDotenv, hasSecretMarker } from "../parser/dotenv";
+import { collectSecretKeys, renderTemplate } from "../parser/template";
 import { upsertSecretJson } from "../aws/secrets-manager";
 import { getGitHubToken } from "../auth/github-auth";
 import { commitAll, pushWithToken } from "../git/repo-manager";
@@ -69,11 +69,31 @@ async function handleLocalChange(destinationPath: string): Promise<void> {
   const mappingFullPath = path.join(context.local_clone_path, context.mapping_path);
   if (!fs.existsSync(mappingFullPath)) return;
   const mappingRaw = fs.readFileSync(mappingFullPath, "utf8");
-  const mapping = JSON.parse(mappingRaw) as { secrets?: Record<string, { jsonKey: string }> };
+  const mapping = JSON.parse(mappingRaw) as {
+    secrets?: Record<string, { jsonKey: string }>;
+  };
   const secretKeys = new Set(Object.keys(mapping.secrets ?? {}));
 
   const content = fs.readFileSync(destinationPath, "utf8");
   const parsed = parseDotenv(content);
+  const explicitSecretKeys = collectSecretKeys(parsed, (line) =>
+    hasSecretMarker(line.valuePart)
+  );
+  let mappingUpdated = false;
+  if (explicitSecretKeys.length > 0) {
+    mapping.secrets = mapping.secrets ?? {};
+    for (const key of explicitSecretKeys) {
+      if (!mapping.secrets[key]) {
+        mapping.secrets[key] = { jsonKey: key };
+        secretKeys.add(key);
+        mappingUpdated = true;
+      }
+    }
+  }
+  if (mappingUpdated) {
+    fs.writeFileSync(mappingFullPath, JSON.stringify(mapping, null, 2), "utf8");
+  }
+
   const { template, secrets } = renderTemplate(parsed, secretKeys);
 
   const templateFullPath = path.join(context.local_clone_path, context.template_path);

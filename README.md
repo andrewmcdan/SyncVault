@@ -46,6 +46,11 @@ If you see the SUID sandbox error, you can either:
 - Use the dev script (we pass `--no-sandbox` for local dev only), or
 - Fix permissions on Electron's `chrome-sandbox` (requires sudo).
 
+```bash
+sudo chown root:root /home/andrew/Documents/projects/SyncVault/node_modules/electron/dist/chrome-sandbox
+sudo chmod 4755 /home/andrew/Documents/projects/SyncVault/node_modules/electron/dist/chrome-sandbox
+```
+
 ## IPC
 Renderer access is via a preload bridge (contextIsolation on).
 - All UI actions (add/pull files, settings, conflicts, logs) are exposed through `window.syncvault`.
@@ -67,6 +72,15 @@ Renderer access is via a preload bridge (contextIsolation on).
 - Conflicts UI with keep-local/keep-remote resolution and open diff.
 - Settings for GitHub PAT, AWS profile/region, and sync timing.
 - Projects and logs views.
+
+## Marking secrets inline
+You can explicitly mark a value as a secret by appending `!SYNCVAULT`:
+
+```
+SECRET_ENV_VAR=my_secret_value !SYNCVAULT
+```
+
+SyncVault strips the marker, treats the key as secret, and updates the mapping.
 
 ## Roadmap (high level)
 1. Tray MVP polish (pause syncing, richer project details)

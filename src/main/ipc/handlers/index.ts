@@ -14,7 +14,7 @@ import type {
   LogEntry,
   SyncStatus
 } from "../../../shared/types";
-import { parseDotenv, isLikelySecretKey } from "../../services/parser/dotenv";
+import { parseDotenv, isLikelySecretKey, hasSecretMarker } from "../../services/parser/dotenv";
 import { collectSecretKeys } from "../../services/parser/template";
 import path from "node:path";
 import { addFileFromPath } from "../../services/add-file";
@@ -102,7 +102,9 @@ export function registerIpcHandlers(): void {
       const { readFileSync } = await import("node:fs");
       const content = readFileSync(filePath, "utf8");
       const parsed = parseDotenv(content);
-      const suggestedSecretKeys = collectSecretKeys(parsed, isLikelySecretKey);
+      const suggestedSecretKeys = collectSecretKeys(parsed, (line) =>
+        isLikelySecretKey(line.key) || hasSecretMarker(line.valuePart)
+      );
       const lines = parsed.lines.map((line, index) => ({
         index,
         raw: line.raw,

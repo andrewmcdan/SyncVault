@@ -15,11 +15,18 @@ import {
 } from "../db/repositories/destinations";
 import { generateId, hashString } from "../util/hash";
 import { ensureDir, getDataRoot, toPosixPath } from "../util/paths";
-import { checkoutMain, cloneRepo, commitAll, ensureLocalRepo, ensureRemote, pushWithToken } from "./git/repo-manager";
+import {
+  checkoutMain,
+  cloneRepo,
+  commitAll,
+  ensureLocalRepo,
+  ensureRemote,
+  pushWithToken
+} from "./git/repo-manager";
 import { runGit } from "./git/git-client";
 import { createPrivateRepo } from "./github/repo-service";
 import { getGitHubToken } from "./auth/github-auth";
-import { parseDotenv, isLikelySecretKey } from "./parser/dotenv";
+import { parseDotenv, isLikelySecretKey, hasSecretMarker } from "./parser/dotenv";
 import { collectSecretKeys, renderTemplate } from "./parser/template";
 import { buildMapping, serializeMapping } from "./parser/mapping";
 import { upsertSecretJson } from "./aws/secrets-manager";
@@ -211,7 +218,7 @@ export async function addFileFromPath(
   }
 
   if (project.github_clone_url) {
-    await cloneRepo(project.github_clone_url, project.local_clone_path);
+    await cloneRepo(project.github_clone_url, project.local_clone_path, token);
     await ensureRemote(project.local_clone_path, project.github_clone_url);
   } else {
     await ensureLocalRepo(project.local_clone_path);
@@ -223,7 +230,14 @@ export async function addFileFromPath(
   const content = fs.readFileSync(resolvedPath, "utf8");
   const parsed = parseDotenv(content);
 
-  let secretKeys = options.secretKeys ?? collectSecretKeys(parsed, isLikelySecretKey);
+  const explicitSecretKeys = collectSecretKeys(parsed, (line) =>
+    hasSecretMarker(line.valuePart)
+  );
+  let secretKeys = options.secretKeys
+    ? Array.from(new Set([...options.secretKeys, ...explicitSecretKeys]))
+    : collectSecretKeys(parsed, (line) =>
+        isLikelySecretKey(line.key) || hasSecretMarker(line.valuePart)
+      );
   if (secretKeys.length === 0) {
     secretKeys = gatherAllKeys(parsed);
   }

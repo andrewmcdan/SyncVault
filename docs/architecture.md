@@ -7,7 +7,7 @@ SyncVault is an Electron tray app with a long-running main process that performs
 ### Electron main process
 - Owns the tray menu and global app lifecycle.
 - Orchestrates sync, polling, and background tasks.
-- Hosts the SQLite database and services for GitHub, Git, and AWS.
+- Hosts the SQL.js (SQLite) database and services for GitHub, Git, and AWS.
 
 ### Tray and windows
 - Tray menu is always available and triggers core actions.
@@ -24,14 +24,15 @@ SyncVault is an Electron tray app with a long-running main process that performs
 - `git`: clone/fetch/pull/commit/push wrappers
 - `github`: repo creation and listing via Octokit
 - `aws`: Secrets Manager read/write
-- `auth`: keychain, GitHub token, AWS profile selection
+- `auth`: GitHub PAT storage and AWS profile selection
 - `parser`: dotenv parsing and templating
 - `scheduler`: debounce and scheduling utilities
 
 ### Storage
-- SQLite DB stored under `app.getPath("userData")/data`.
-- Local clones of template repos stored under the same data root (planned).
+- SQL.js DB stored under `app.getPath("userData")/data/syncvault.sqlite`.
+- Local clones of template repos stored under `app.getPath("userData")/data/repos`.
 - Templates and mapping files live in the remote GitHub repo under `templates/` and `syncvault/`.
+- Each repo includes `syncvault/project.json` and `syncvault/files/<fileId>.json` mappings.
 
 ## Data flow
 
@@ -40,7 +41,7 @@ SyncVault is an Electron tray app with a long-running main process that performs
 2. Create project record if missing.
 3. Create or connect to remote GitHub repo and clone locally.
 4. Parse file, select secret keys, and generate template + mapping.
-5. Write template and mapping into the local clone.
+5. Write template, mapping, and `syncvault/project.json` into the local clone.
 6. Update AWS secret JSON.
 7. Commit and push the template repo.
 8. Register destination path for ongoing watch + sync.
@@ -62,8 +63,10 @@ SyncVault is an Electron tray app with a long-running main process that performs
 ## Conflict handling
 - If local and remote changed since the last sync, write `.local` and `.remote` copies.
 - Mark conflict records for UI resolution.
+- UI actions allow “keep local” (updates template + AWS) or “keep remote” (overwrites plaintext).
+- “Open diff” generates a git diff between copies.
 
 ## Security posture
 - No secret values in Git or in the local DB.
 - Secrets read/write via AWS Secrets Manager only.
-- GitHub and AWS credentials stored in OS keychain (planned).
+- GitHub PAT and AWS profile selection are stored in SQLite settings (keychain planned).

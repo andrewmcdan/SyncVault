@@ -74,6 +74,11 @@ Columns:
 - `key`: string (primary key)
 - `value`: string
 
+Common keys:
+- `github.token` (string) — GitHub PAT
+- `aws.selection` (JSON) — `{ profile, region? }`
+- `sync.settings` (JSON) — `{ pollIntervalMs, debounceMs, loopWindowMs, refreshIntervalMs }`
+
 ## Indexes
 - `files.project_id`
 - `destinations.file_id`

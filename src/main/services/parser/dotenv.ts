@@ -24,6 +24,7 @@ export interface DotenvFile {
 }
 
 const KEY_REGEX = /^([A-Za-z_][A-Za-z0-9_]*)$/;
+export const SYNCVAULT_SECRET_MARKER = "!SYNCVAULT";
 
 function splitInlineComment(valueRaw: string): {
   valuePart: string;
@@ -116,4 +117,26 @@ export function isLikelySecretKey(key: string): boolean {
   return ["SECRET", "TOKEN", "PASSWORD", "PASS", "API_KEY", "PRIVATE_KEY", "KEY"].some((token) =>
     upper.includes(token)
   );
+}
+
+export function extractSecretMarker(valuePart: string): { value: string; hasMarker: boolean } {
+  const trimmed = valuePart.trimEnd();
+  const markerUpper = SYNCVAULT_SECRET_MARKER.toUpperCase();
+  const trimmedUpper = trimmed.toUpperCase();
+  if (!trimmedUpper.endsWith(markerUpper)) {
+    return { value: valuePart, hasMarker: false };
+  }
+
+  const markerStart = trimmed.length - SYNCVAULT_SECRET_MARKER.length;
+  const beforeMarker = markerStart > 0 ? trimmed[markerStart - 1] : "";
+  if (markerStart > 0 && !/\s/.test(beforeMarker)) {
+    return { value: valuePart, hasMarker: false };
+  }
+
+  const withoutMarker = trimmed.slice(0, markerStart).trimEnd();
+  return { value: withoutMarker, hasMarker: true };
+}
+
+export function hasSecretMarker(valuePart: string): boolean {
+  return extractSecretMarker(valuePart).hasMarker;
 }

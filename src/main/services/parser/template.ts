@@ -1,4 +1,5 @@
 import type { DotenvFile } from "./dotenv";
+import { extractSecretMarker } from "./dotenv";
 
 export const PLACEHOLDER_PREFIX = "SYNCVAULT";
 
@@ -24,9 +25,10 @@ export function renderTemplate(
       continue;
     }
 
-    const value = line.valuePart.trim();
-    if (value !== "") {
-      secrets[line.key] = value;
+    const { value } = extractSecretMarker(line.valuePart);
+    const trimmedValue = value.trim();
+    if (trimmedValue !== "") {
+      secrets[line.key] = trimmedValue;
     }
 
     const placeholder = makePlaceholder(line.key);
@@ -44,11 +46,11 @@ export function renderTemplate(
 
 export function collectSecretKeys(
   parsed: DotenvFile,
-  matcher: (key: string) => boolean
+  matcher: (line: Extract<DotenvFile["lines"][number], { type: "kv" }>) => boolean
 ): string[] {
   const keys = new Set<string>();
   for (const line of parsed.lines) {
-    if (line.type === "kv" && matcher(line.key)) {
+    if (line.type === "kv" && matcher(line)) {
       keys.add(line.key);
     }
   }

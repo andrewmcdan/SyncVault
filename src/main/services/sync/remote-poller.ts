@@ -12,8 +12,7 @@ import {
 import { applyAwsSelection } from "../auth/aws-auth";
 import { getGitHubToken } from "../auth/github-auth";
 import { getSecretJson } from "../aws/secrets-manager";
-import { cloneRepo, ensureRemote } from "../git/repo-manager";
-import { runGit } from "../git/git-client";
+import { cloneRepo, ensureRemote, pullWithToken } from "../git/repo-manager";
 import { writeFileAtomic } from "../../util/fs-atomic";
 import { hashString } from "../../util/hash";
 import type { LogEntry } from "../../../shared/types";
@@ -72,11 +71,12 @@ function renderTemplate(template: string, secrets: Record<string, string>): stri
 async function syncProject(project: ReturnType<typeof listProjects>[number]): Promise<void> {
   if (!project.local_clone_path || !project.github_clone_url) return;
 
-  await cloneRepo(project.github_clone_url, project.local_clone_path);
+  const token = getGitHubToken() ?? undefined;
+  await cloneRepo(project.github_clone_url, project.local_clone_path, token);
   await ensureRemote(project.local_clone_path, project.github_clone_url);
 
   try {
-    await runGit(["pull", "origin", "main"], project.local_clone_path);
+    await pullWithToken(project.local_clone_path, project.github_clone_url, "main", token);
   } catch (error) {
     appendLog(createLog("warn", `Git pull failed for ${project.github_repo ?? "repo"}`));
     return;

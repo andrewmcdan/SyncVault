@@ -13,8 +13,7 @@ import {
 } from "../db/repositories/projects";
 import { generateId, hashString } from "../util/hash";
 import { ensureDir, getDataRoot } from "../util/paths";
-import { cloneRepo, ensureRemote } from "./git/repo-manager";
-import { runGit } from "./git/git-client";
+import { cloneRepo, ensureRemote, pullWithToken } from "./git/repo-manager";
 import { listSyncVaultRepos } from "./github/repo-service";
 import { getGitHubToken } from "./auth/github-auth";
 import { applyAwsSelection } from "./auth/aws-auth";
@@ -98,9 +97,10 @@ export async function listRemoteFiles(owner: string, repo: string): Promise<Remo
   const token = getGitHubToken();
   if (!token) throw new Error("GitHub token not configured.");
   const clonePath = getProjectClonePath(owner, repo);
-  await cloneRepo(`https://github.com/${owner}/${repo}.git`, clonePath);
-  await ensureRemote(clonePath, `https://github.com/${owner}/${repo}.git`);
-  await runGit(["pull", "origin", "main"], clonePath);
+  const remoteUrl = `https://github.com/${owner}/${repo}.git`;
+  await cloneRepo(remoteUrl, clonePath, token);
+  await ensureRemote(clonePath, remoteUrl);
+  await pullWithToken(clonePath, remoteUrl, "main", token);
 
   const filesDir = path.join(clonePath, "syncvault", "files");
   if (!fs.existsSync(filesDir)) return [];
@@ -133,9 +133,10 @@ export async function pullRemoteFile(
   if (!token) throw new Error("GitHub token not configured.");
 
   const clonePath = getProjectClonePath(owner, repo);
-  await cloneRepo(`https://github.com/${owner}/${repo}.git`, clonePath);
-  await ensureRemote(clonePath, `https://github.com/${owner}/${repo}.git`);
-  await runGit(["pull", "origin", "main"], clonePath);
+  const remoteUrl = `https://github.com/${owner}/${repo}.git`;
+  await cloneRepo(remoteUrl, clonePath, token);
+  await ensureRemote(clonePath, remoteUrl);
+  await pullWithToken(clonePath, remoteUrl, "main", token);
 
   const mappingPath = path.join(clonePath, "syncvault", "files", `${fileId}.json`);
   const mapping = loadMapping(mappingPath);
