@@ -15,7 +15,12 @@ import { generateId, hashString } from "../util/hash";
 import { ensureDir, getDataRoot } from "../util/paths";
 import { cloneRepo, ensureRemote, pullWithToken } from "./git/repo-manager";
 import { listSyncVaultRepos } from "./github/repo-service";
-import { getGitHubToken, shouldUseGitHubTokenForGit } from "./auth/github-auth";
+import {
+  getGitHubApiToken,
+  getGitHubToken,
+  shouldUseGitHubTokenForGit,
+  getGitHubAuthMode
+} from "./auth/github-auth";
 import { applyAwsSelection } from "./auth/aws-auth";
 import { getSecretJson } from "./aws/secrets-manager";
 import type { LogEntry } from "../../shared/types";
@@ -87,15 +92,22 @@ function renderTemplate(template: string, secrets: Record<string, string>): stri
 }
 
 export async function listRemoteProjects(): Promise<RemoteProjectItem[]> {
-  const token = getGitHubToken();
-  if (!token) throw new Error("GitHub token not configured.");
-  const repos = await listSyncVaultRepos(token);
+  const apiToken = await getGitHubApiToken();
+  if (!apiToken) {
+    if (getGitHubAuthMode() === "native") {
+      return [];
+    }
+    throw new Error("GitHub token not configured.");
+  }
+  const repos = await listSyncVaultRepos(apiToken);
   return repos.map((repo) => ({ owner: repo.owner, repo: repo.name, cloneUrl: repo.cloneUrl }));
 }
 
 export async function listRemoteFiles(owner: string, repo: string): Promise<RemoteFileItem[]> {
   const token = getGitHubToken();
-  if (!token) throw new Error("GitHub token not configured.");
+  if (!token && shouldUseGitHubTokenForGit()) {
+    throw new Error("GitHub token not configured.");
+  }
   const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
   const clonePath = getProjectClonePath(owner, repo);
   const remoteUrl = `https://github.com/${owner}/${repo}.git`;
@@ -131,7 +143,9 @@ export async function pullRemoteFile(
   });
 
   const token = getGitHubToken();
-  if (!token) throw new Error("GitHub token not configured.");
+  if (!token && shouldUseGitHubTokenForGit()) {
+    throw new Error("GitHub token not configured.");
+  }
   const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
 
   const clonePath = getProjectClonePath(owner, repo);

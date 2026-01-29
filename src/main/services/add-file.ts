@@ -25,7 +25,11 @@ import {
 } from "./git/repo-manager";
 import { runGit } from "./git/git-client";
 import { createPrivateRepo } from "./github/repo-service";
-import { getGitHubToken, shouldUseGitHubTokenForGit } from "./auth/github-auth";
+import {
+  getGitHubApiToken,
+  getGitHubToken,
+  shouldUseGitHubTokenForGit
+} from "./auth/github-auth";
 import { parseDotenv, isLikelySecretKey, hasSecretMarker } from "./parser/dotenv";
 import { collectSecretKeys, renderTemplate } from "./parser/template";
 import { buildMapping, serializeMapping } from "./parser/mapping";
@@ -185,11 +189,12 @@ export async function addFileFromPath(
     throw new Error("Project local clone path is missing.");
   }
 
-  const token = getGitHubToken();
-  if (!token) {
+  const apiToken = await getGitHubApiToken();
+  if (!apiToken) {
     throw new Error("GitHub token is not configured. Set it in Settings.");
   }
-  const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
+  const token = getGitHubToken();
+  const gitToken = shouldUseGitHubTokenForGit() ? token ?? apiToken : undefined;
 
   if (!project.github_repo) {
     let originUrl: string | null = null;
@@ -201,7 +206,7 @@ export async function addFileFromPath(
     }
 
     const repoName = buildRepoName(repoRoot, originUrl);
-    const created = await createPrivateRepo(token, repoName);
+    const created = await createPrivateRepo(apiToken, repoName);
     updateProjectFields(project.id, {
       github_owner: created.owner,
       github_repo: created.name,
@@ -290,7 +295,7 @@ export async function addFileFromPath(
       project.local_clone_path,
       project.github_owner,
       project.github_repo,
-      token,
+      apiToken,
       shouldUseGitHubTokenForGit()
     );
   }

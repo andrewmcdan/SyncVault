@@ -10,8 +10,13 @@ export default function PullFilePage(): JSX.Element {
 
   useEffect(() => {
     const load = async () => {
-      const items = await window.syncvault?.listPullProjects?.();
-      setProjects(items ?? []);
+      try {
+        const items = await window.syncvault?.listPullProjects?.();
+        setProjects(items ?? []);
+      } catch (error) {
+        setProjects([]);
+        setStatus("Unable to list repos without a GitHub token.");
+      }
     };
     void load();
   }, []);
@@ -43,7 +48,9 @@ export default function PullFilePage(): JSX.Element {
         <div>
           <h3>Projects</h3>
           {projects.length === 0 ? (
-            <p className="muted">No SyncVault repos found.</p>
+            <p className="muted">
+              {status || "No SyncVault repos found."}
+            </p>
           ) : (
             <ul className="pull-file__list">
               {projects.map((project) => (
