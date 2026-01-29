@@ -1,3 +1,4 @@
+![SyncVaule Logo](assets/icons/icon.png)
 # SyncVault
 
 SyncVault is a cross-platform tray app that keeps local config files in sync across machines while keeping secrets out of Git. Templates live in a private GitHub repo; secret values live in AWS Secrets Manager. The app renders plaintext locally, monitors changes, and keeps both sides synchronized.
