@@ -8,6 +8,7 @@ import type {
   ProjectListItem,
   SyncSettings,
   GitHubTokenPayload,
+  GitHubAuthStatus,
   PullFilePayload,
   RemoteFileItem,
   RemoteProjectItem,
@@ -36,7 +37,8 @@ import {
 import {
   clearGitHubToken,
   getGitHubToken,
-  setGitHubToken
+  setGitHubToken,
+  getGitHubAuthMode
 } from "../../services/auth/github-auth";
 
 const statusSubscribers = new Set<WebContents>();
@@ -146,9 +148,17 @@ export function registerIpcHandlers(): void {
     }
   );
 
-  ipcMain.handle(IPC_CHANNELS.GITHUB_AUTH_STATUS, () => ({
-    isAuthenticated: Boolean(getGitHubToken())
-  }));
+  ipcMain.handle(IPC_CHANNELS.GITHUB_AUTH_STATUS, (): GitHubAuthStatus => {
+    const mode = getGitHubAuthMode();
+    return {
+      isAuthenticated: Boolean(getGitHubToken()),
+      mode,
+      message:
+        mode === "native"
+          ? "GitHub already enabled via system Git credentials."
+          : undefined
+    };
+  });
 
   ipcMain.handle(IPC_CHANNELS.GITHUB_AUTH_CLEAR, () => {
     clearGitHubToken();

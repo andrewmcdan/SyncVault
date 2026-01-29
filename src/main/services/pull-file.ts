@@ -15,7 +15,7 @@ import { generateId, hashString } from "../util/hash";
 import { ensureDir, getDataRoot } from "../util/paths";
 import { cloneRepo, ensureRemote, pullWithToken } from "./git/repo-manager";
 import { listSyncVaultRepos } from "./github/repo-service";
-import { getGitHubToken } from "./auth/github-auth";
+import { getGitHubToken, shouldUseGitHubTokenForGit } from "./auth/github-auth";
 import { applyAwsSelection } from "./auth/aws-auth";
 import { getSecretJson } from "./aws/secrets-manager";
 import type { LogEntry } from "../../shared/types";
@@ -96,11 +96,12 @@ export async function listRemoteProjects(): Promise<RemoteProjectItem[]> {
 export async function listRemoteFiles(owner: string, repo: string): Promise<RemoteFileItem[]> {
   const token = getGitHubToken();
   if (!token) throw new Error("GitHub token not configured.");
+  const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
   const clonePath = getProjectClonePath(owner, repo);
   const remoteUrl = `https://github.com/${owner}/${repo}.git`;
-  await cloneRepo(remoteUrl, clonePath, token);
+  await cloneRepo(remoteUrl, clonePath, gitToken);
   await ensureRemote(clonePath, remoteUrl);
-  await pullWithToken(clonePath, remoteUrl, "main", token);
+  await pullWithToken(clonePath, remoteUrl, "main", gitToken);
 
   const filesDir = path.join(clonePath, "syncvault", "files");
   if (!fs.existsSync(filesDir)) return [];
@@ -131,12 +132,13 @@ export async function pullRemoteFile(
 
   const token = getGitHubToken();
   if (!token) throw new Error("GitHub token not configured.");
+  const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
 
   const clonePath = getProjectClonePath(owner, repo);
   const remoteUrl = `https://github.com/${owner}/${repo}.git`;
-  await cloneRepo(remoteUrl, clonePath, token);
+  await cloneRepo(remoteUrl, clonePath, gitToken);
   await ensureRemote(clonePath, remoteUrl);
-  await pullWithToken(clonePath, remoteUrl, "main", token);
+  await pullWithToken(clonePath, remoteUrl, "main", gitToken);
 
   const mappingPath = path.join(clonePath, "syncvault", "files", `${fileId}.json`);
   const mapping = loadMapping(mappingPath);

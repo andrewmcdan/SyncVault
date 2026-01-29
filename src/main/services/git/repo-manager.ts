@@ -80,3 +80,17 @@ export async function pullWithToken(
   const pullUrl = token ? buildAuthUrl(remoteUrl, token) : remoteUrl;
   await runGit(["pull", pullUrl, branch], repoPath);
 }
+
+export async function pushWithAuth(
+  repoPath: string,
+  owner: string,
+  repo: string,
+  token: string | null,
+  useToken: boolean
+): Promise<void> {
+  if (useToken && token) {
+    await pushWithToken(repoPath, owner, repo, token);
+    return;
+  }
+  await runGit(["push", "origin", "HEAD:main"], repoPath);
+}

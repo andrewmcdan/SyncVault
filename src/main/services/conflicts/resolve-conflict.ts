@@ -14,8 +14,8 @@ import { parseDotenv } from "../parser/dotenv";
 import { renderTemplate } from "../parser/template";
 import { upsertSecretJson, getSecretJson } from "../aws/secrets-manager";
 import { applyAwsSelection } from "../auth/aws-auth";
-import { commitAll, pushWithToken } from "../git/repo-manager";
-import { getGitHubToken } from "../auth/github-auth";
+import { commitAll, pushWithAuth } from "../git/repo-manager";
+import { getGitHubToken, shouldUseGitHubTokenForGit } from "../auth/github-auth";
 import type { LogEntry } from "../../../shared/types";
 
 interface MappingFile {
@@ -101,8 +101,14 @@ export async function resolveConflictKeepLocal(conflictId: string): Promise<void
 
   await commitAll(context.local_clone_path, "SyncVault: resolve conflict (keep local)");
   const token = getGitHubToken();
-  if (token && context.github_owner && context.github_repo) {
-    await pushWithToken(context.local_clone_path, context.github_owner, context.github_repo, token);
+  if (context.github_owner && context.github_repo) {
+    await pushWithAuth(
+      context.local_clone_path,
+      context.github_owner,
+      context.github_repo,
+      token,
+      shouldUseGitHubTokenForGit()
+    );
   }
 
   const localHash = hashString(content);

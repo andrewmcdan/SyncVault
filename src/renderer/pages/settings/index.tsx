@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AwsProfileInfo, AwsProfileSelection, SyncSettings } from "@shared/types";
+import type { AwsProfileInfo, AwsProfileSelection, GitHubAuthStatus, SyncSettings } from "@shared/types";
 
 const defaultSyncSettings: SyncSettings = {
   pollIntervalMs: 20000,
@@ -27,6 +27,8 @@ export default function SettingsPage(): JSX.Element {
   const [pat, setPat] = useState("");
   const [githubStatus, setGithubStatus] = useState("");
   const [gitHubAuthed, setGitHubAuthed] = useState(false);
+  const [gitHubAuthMode, setGitHubAuthMode] = useState<GitHubAuthStatus["mode"]>("pat");
+  const [gitHubAuthMessage, setGitHubAuthMessage] = useState<string | undefined>();
   const [awsStatus, setAwsStatus] = useState("");
   const [syncStatus, setSyncStatus] = useState("");
   const [syncSettings, setSyncSettingsState] = useState<SyncSettings>(defaultSyncSettings);
@@ -47,6 +49,8 @@ export default function SettingsPage(): JSX.Element {
       const status = await window.syncvault?.getGitHubAuthStatus?.();
       if (status) {
         setGitHubAuthed(status.isAuthenticated);
+        setGitHubAuthMode(status.mode);
+        setGitHubAuthMessage(status.message);
       }
       const settings = await window.syncvault?.getSyncSettings?.();
       if (settings) setSyncSettingsState(settings);
@@ -103,6 +107,10 @@ export default function SettingsPage(): JSX.Element {
   };
 
   const handleSavePat = async () => {
+    if (gitHubAuthMode === "native") {
+      setGithubStatus("GitHub is already enabled via system credentials.");
+      return;
+    }
     if (!pat.trim()) {
       setGithubStatus("GitHub token is required.");
       return;
@@ -200,17 +208,29 @@ export default function SettingsPage(): JSX.Element {
               value={pat}
               onChange={(event) => setPat(event.target.value)}
               placeholder="ghp_..."
+              disabled={gitHubAuthMode === "native"}
             />
           </label>
-          <button type="button" onClick={handleSavePat} disabled={isBusy}>
+          <button type="button" onClick={handleSavePat} disabled={isBusy || gitHubAuthMode === "native"}>
             Save token
           </button>
-          <button type="button" onClick={handleClearGitHub} disabled={!gitHubAuthed}>
+          <button
+            type="button"
+            onClick={handleClearGitHub}
+            disabled={!gitHubAuthed || gitHubAuthMode === "native"}
+          >
             Clear token
           </button>
         </div>
         {githubStatus && <p className="settings__status">{githubStatus}</p>}
-        {gitHubAuthed && <p className="settings__status">GitHub is connected.</p>}
+        {gitHubAuthMode === "native" && (
+          <p className="settings__status">
+            {gitHubAuthMessage ?? "GitHub already enabled via system Git credentials."}
+          </p>
+        )}
+        {gitHubAuthed && gitHubAuthMode !== "native" && (
+          <p className="settings__status">GitHub is connected.</p>
+        )}
       </div>
 
       <div className="settings__section">

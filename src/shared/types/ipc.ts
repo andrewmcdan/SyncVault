@@ -50,6 +50,12 @@ export interface GitHubTokenPayload {
   token: string;
 }
 
+export interface GitHubAuthStatus {
+  isAuthenticated: boolean;
+  mode: "pat" | "native";
+  message?: string;
+}
+
 export interface RemoteProjectItem {
   owner: string;
   repo: string;

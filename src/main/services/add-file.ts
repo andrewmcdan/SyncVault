@@ -21,11 +21,11 @@ import {
   commitAll,
   ensureLocalRepo,
   ensureRemote,
-  pushWithToken
+  pushWithAuth
 } from "./git/repo-manager";
 import { runGit } from "./git/git-client";
 import { createPrivateRepo } from "./github/repo-service";
-import { getGitHubToken } from "./auth/github-auth";
+import { getGitHubToken, shouldUseGitHubTokenForGit } from "./auth/github-auth";
 import { parseDotenv, isLikelySecretKey, hasSecretMarker } from "./parser/dotenv";
 import { collectSecretKeys, renderTemplate } from "./parser/template";
 import { buildMapping, serializeMapping } from "./parser/mapping";
@@ -189,6 +189,7 @@ export async function addFileFromPath(
   if (!token) {
     throw new Error("GitHub token is not configured. Set it in Settings.");
   }
+  const gitToken = shouldUseGitHubTokenForGit() ? token : undefined;
 
   if (!project.github_repo) {
     let originUrl: string | null = null;
@@ -218,7 +219,7 @@ export async function addFileFromPath(
   }
 
   if (project.github_clone_url) {
-    await cloneRepo(project.github_clone_url, project.local_clone_path, token);
+    await cloneRepo(project.github_clone_url, project.local_clone_path, gitToken);
     await ensureRemote(project.local_clone_path, project.github_clone_url);
   } else {
     await ensureLocalRepo(project.local_clone_path);
@@ -285,7 +286,13 @@ export async function addFileFromPath(
 
   await commitAll(project.local_clone_path, `SyncVault: add ${relativePosix}`);
   if (project.github_owner && project.github_repo) {
-    await pushWithToken(project.local_clone_path, project.github_owner, project.github_repo, token);
+    await pushWithAuth(
+      project.local_clone_path,
+      project.github_owner,
+      project.github_repo,
+      token,
+      shouldUseGitHubTokenForGit()
+    );
   }
 
   saveDatabase();

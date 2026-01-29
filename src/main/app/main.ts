@@ -5,6 +5,7 @@ import { registerIpcHandlers } from "../ipc/handlers";
 import { showMainWindow } from "../windows/main-window";
 import { resolveAssetPath } from "../util/paths";
 import { startSyncEngine, stopSyncEngine } from "../services/sync/engine";
+import { detectGitHubAuthMode } from "../services/auth/github-auth";
 
 let tray: Tray | null = null;
 
@@ -65,6 +66,11 @@ async function start(): Promise<void> {
 
   registerIpcHandlers();
   registerAppHandlers();
+  try {
+    await detectGitHubAuthMode();
+  } catch (error) {
+    console.warn("GitHub auth detection failed", error);
+  }
   createTray();
   startSyncEngine();
 }

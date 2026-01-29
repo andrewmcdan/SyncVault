@@ -3,6 +3,7 @@ import type {
   AddFilePreviewResult,
   AwsProfileInfo,
   AwsProfileSelection,
+  GitHubAuthStatus,
   GitHubTokenPayload,
   PullFilePayload,
   RemoteFileItem,
@@ -28,7 +29,7 @@ declare global {
       getAwsProfile: () => Promise<AwsProfileSelection | null>;
       setAwsProfile: (selection: AwsProfileSelection) => Promise<AwsProfileSelection>;
       setGitHubToken: (payload: GitHubTokenPayload) => Promise<{ ok: boolean }>;
-      getGitHubAuthStatus: () => Promise<{ isAuthenticated: boolean }>;
+      getGitHubAuthStatus: () => Promise<GitHubAuthStatus>;
       clearGitHubAuth: () => Promise<{ ok: boolean }>;
       listPullProjects: () => Promise<RemoteProjectItem[]>;
       listPullFiles: (owner: string, repo: string) => Promise<RemoteFileItem[]>;

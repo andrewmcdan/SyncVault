@@ -5,6 +5,7 @@ import type {
   AddFilePreviewResult,
   AwsProfileInfo,
   AwsProfileSelection,
+  GitHubAuthStatus,
   GitHubTokenPayload,
   PullFilePayload,
   RemoteFileItem,
@@ -49,7 +50,7 @@ const api = {
     ipcRenderer.invoke(IPC_CHANNELS.AWS_PROFILE_SET, selection),
   setGitHubToken: (payload: GitHubTokenPayload): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC_CHANNELS.GITHUB_TOKEN_SET, payload),
-  getGitHubAuthStatus: (): Promise<{ isAuthenticated: boolean }> =>
+  getGitHubAuthStatus: (): Promise<GitHubAuthStatus> =>
     ipcRenderer.invoke(IPC_CHANNELS.GITHUB_AUTH_STATUS),
   clearGitHubAuth: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC_CHANNELS.GITHUB_AUTH_CLEAR),

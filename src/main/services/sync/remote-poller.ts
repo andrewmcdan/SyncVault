@@ -10,11 +10,12 @@ import {
   updateDestinationFields
 } from "../../db/repositories/destinations";
 import { applyAwsSelection } from "../auth/aws-auth";
-import { getGitHubToken } from "../auth/github-auth";
+import { getGitHubToken, shouldUseGitHubTokenForGit } from "../auth/github-auth";
 import { getSecretJson } from "../aws/secrets-manager";
 import { cloneRepo, ensureRemote, pullWithToken } from "../git/repo-manager";
 import { writeFileAtomic } from "../../util/fs-atomic";
 import { hashString } from "../../util/hash";
+import { ensureDir, getDataRoot } from "../../util/paths";
 import type { LogEntry } from "../../../shared/types";
 
 interface MappingFile {
@@ -68,15 +69,30 @@ function renderTemplate(template: string, secrets: Record<string, string>): stri
   return output;
 }
 
+function buildConflictCopyPaths(
+  destinationPath: string,
+  conflictId: string
+): { localCopy: string; remoteCopy: string } {
+  const baseName = path.basename(destinationPath);
+  const slug = `${baseName}-${hashString(destinationPath).slice(0, 8)}`;
+  const rootDir = path.join(getDataRoot(), "conflicts", slug);
+  ensureDir(rootDir);
+  return {
+    localCopy: path.join(rootDir, `${conflictId}.local`),
+    remoteCopy: path.join(rootDir, `${conflictId}.remote`)
+  };
+}
+
 async function syncProject(project: ReturnType<typeof listProjects>[number]): Promise<void> {
   if (!project.local_clone_path || !project.github_clone_url) return;
 
-  const token = getGitHubToken() ?? undefined;
-  await cloneRepo(project.github_clone_url, project.local_clone_path, token);
+  const token = getGitHubToken();
+  const gitToken = shouldUseGitHubTokenForGit() ? token ?? undefined : undefined;
+  await cloneRepo(project.github_clone_url, project.local_clone_path, gitToken);
   await ensureRemote(project.local_clone_path, project.github_clone_url);
 
   try {
-    await pullWithToken(project.local_clone_path, project.github_clone_url, "main", token);
+    await pullWithToken(project.local_clone_path, project.github_clone_url, "main", gitToken);
   } catch (error) {
     appendLog(createLog("warn", `Git pull failed for ${project.github_repo ?? "repo"}`));
     return;
@@ -131,13 +147,20 @@ async function syncProject(project: ReturnType<typeof listProjects>[number]): Pr
           destination.last_render_hash &&
           destination.last_render_hash !== currentHash
         ) {
-          const localCopy = `${destination.destination_path}.local`;
-          const remoteCopy = `${destination.destination_path}.remote`;
+          const existingConflict = findOpenConflictByDestination(destination.id);
+          const conflictId = existingConflict?.id ?? crypto.randomUUID();
+          const { localCopy, remoteCopy } =
+            existingConflict?.local_copy_path && existingConflict.remote_copy_path
+              ? {
+                  localCopy: existingConflict.local_copy_path,
+                  remoteCopy: existingConflict.remote_copy_path
+                }
+              : buildConflictCopyPaths(destination.destination_path, conflictId);
           writeFileAtomic(localCopy, current);
           writeFileAtomic(remoteCopy, rendered);
-          if (!findOpenConflictByDestination(destination.id)) {
+          if (!existingConflict) {
             createConflict({
-              id: crypto.randomUUID(),
+              id: conflictId,
               destination_id: destination.id,
               detected_at: new Date().toISOString(),
               local_copy_path: localCopy,

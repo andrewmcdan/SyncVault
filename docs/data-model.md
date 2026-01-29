@@ -76,6 +76,7 @@ Columns:
 
 Common keys:
 - `github.token` (string) — GitHub PAT
+- `github.auth.mode` (string) — `pat` or `native` (system Git credentials)
 - `aws.selection` (JSON) — `{ profile, region? }`
 - `sync.settings` (JSON) — `{ pollIntervalMs, debounceMs, loopWindowMs, refreshIntervalMs }`
 

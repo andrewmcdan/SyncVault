@@ -13,8 +13,8 @@ import { hashString } from "../../util/hash";
 import { parseDotenv, hasSecretMarker } from "../parser/dotenv";
 import { collectSecretKeys, renderTemplate } from "../parser/template";
 import { upsertSecretJson } from "../aws/secrets-manager";
-import { getGitHubToken } from "../auth/github-auth";
-import { commitAll, pushWithToken } from "../git/repo-manager";
+import { getGitHubToken, shouldUseGitHubTokenForGit } from "../auth/github-auth";
+import { commitAll, pushWithAuth } from "../git/repo-manager";
 import { applyAwsSelection } from "../auth/aws-auth";
 import type { LogEntry } from "../../../shared/types";
 
@@ -112,8 +112,14 @@ async function handleLocalChange(destinationPath: string): Promise<void> {
 
   await commitAll(context.local_clone_path, `SyncVault: update ${context.template_path}`);
   const token = getGitHubToken();
-  if (token && context.github_owner && context.github_repo) {
-    await pushWithToken(context.local_clone_path, context.github_owner, context.github_repo, token);
+  if (context.github_owner && context.github_repo) {
+    await pushWithAuth(
+      context.local_clone_path,
+      context.github_owner,
+      context.github_repo,
+      token,
+      shouldUseGitHubTokenForGit()
+    );
   }
 
   saveDatabase();
