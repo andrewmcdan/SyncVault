@@ -5,6 +5,8 @@ SyncVault is a cross-platform tray app that keeps local config files in sync acr
 ## Status
 MVP flows are implemented and usable. Core screens and background sync are in place.
 
+Current release label: `beta.1.0.0` (see `VERSION`).
+
 ## Core ideas
 - Template files in GitHub with placeholders instead of secrets.
 - One AWS Secrets Manager secret per project (JSON object).
