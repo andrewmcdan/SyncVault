@@ -25,11 +25,44 @@ Current release label: `beta.1.0.0` (see `VERSION`).
 - `docs/architecture.md`
 - `docs/data-model.md`
 
+## Installation (downloaded release)
+Download the latest release archive for your OS from the GitHub Releases page, extract it, and install.
+
+### Windows
+- Download the Windows release `.zip`.
+- Extract and run `SyncVault Setup *.exe`.
+
+### Linux
+- Download the Linux release `.zip` (or `.tar.gz`).
+- Extract, then run the AppImage (`chmod +x SyncVault-*.AppImage`) or install the `.deb` with `sudo dpkg -i`.
+
+### macOS
+- Download the macOS release `.zip`.
+- Extract and open `SyncVault-*.dmg`, then drag SyncVault to Applications.
+- If macOS blocks it, Control-click the app and choose Open.
+
+## Installation (built packages)
+Build installers with `npm run dist`. Artifacts are written to `dist/`.
+
+### Windows (NSIS installer)
+- Run the `SyncVault Setup *.exe` installer from `dist/`.
+- Follow the installer prompts (you can choose the install directory).
+- Launch from Start Menu: SyncVault.
+
+### Linux (AppImage or .deb)
+- AppImage: `chmod +x SyncVault-*.AppImage` then run it.
+- Debian/Ubuntu: `sudo dpkg -i syncvault_*_amd64.deb`
+
+### macOS (dmg)
+- Open `SyncVault-*.dmg` from `dist/`.
+- Drag SyncVault to Applications.
+- If macOS blocks it, Control-click the app and choose Open.
+
 ## Development
 Requirements:
 - Node.js (LTS recommended)
 - Git
-- AWS credentials (for Secrets Manager). Profiles are read from `~/.aws/config` and `~/.aws/credentials`.
+- AWS credentials (for Secrets Manager). Profiles are read from `~/.aws/config` and `~/.aws/credentials`. Use AWS CLI or SDK methods to set up.
 - GitHub fine-grained PAT (for repo creation and access)
 
 Scripts:
