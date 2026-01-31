@@ -70,3 +70,8 @@ export async function createPrivateRepo(
     throw error;
   }
 }
+
+export async function deleteRepo(token: string, owner: string, repo: string): Promise<void> {
+  const octokit = getOctokit(token);
+  await octokit.repos.delete({ owner, repo });
+}

@@ -173,3 +173,10 @@ export function updateProjectFields(projectId: string, fields: Partial<ProjectIn
   stmt.run([...values, projectId]);
   stmt.free();
 }
+
+export function deleteProject(projectId: string): void {
+  const db = getDatabase() as Database;
+  const stmt = db.prepare("DELETE FROM projects WHERE id = ?");
+  stmt.run([projectId]);
+  stmt.free();
+}

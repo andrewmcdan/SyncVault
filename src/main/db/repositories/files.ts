@@ -1,4 +1,4 @@
-import type { Database } from "sql.js";
+import type { Database, SqlValue } from "sql.js";
 import { getDatabase } from "../sqlite";
 import type { FileInput, FileRecord } from "../../models/file";
 
@@ -74,4 +74,47 @@ export function createFile(input: FileInput): FileRecord {
     throw new Error("Failed to create file record.");
   }
   return created;
+}
+
+export interface ProjectFileSummary {
+  id: string;
+  source_relative_path: string;
+  template_path: string;
+  mapping_path: string;
+  type: string;
+  updated_at: string | null;
+  destination_count: number;
+}
+
+export function listFilesByProject(projectId: string): ProjectFileSummary[] {
+  const db = getDatabase() as Database;
+  const stmt = db.prepare(
+    "SELECT f.*, " +
+      "(SELECT COUNT(*) FROM destinations d WHERE d.file_id = f.id AND d.is_enabled = 1) " +
+      "AS destination_count " +
+      "FROM files f WHERE f.project_id = ? ORDER BY f.source_relative_path"
+  );
+  stmt.bind([projectId]);
+  const results: ProjectFileSummary[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as Record<string, SqlValue>;
+    results.push({
+      id: row.id as string,
+      source_relative_path: row.source_relative_path as string,
+      template_path: row.template_path as string,
+      mapping_path: row.mapping_path as string,
+      type: row.type as string,
+      updated_at: (row.updated_at as string) ?? null,
+      destination_count: Number(row.destination_count ?? 0)
+    });
+  }
+  stmt.free();
+  return results;
+}
+
+export function deleteFile(fileId: string): void {
+  const db = getDatabase() as Database;
+  const stmt = db.prepare("DELETE FROM files WHERE id = ?");
+  stmt.run([fileId]);
+  stmt.free();
 }

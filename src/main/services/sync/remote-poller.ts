@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
-import { appendLog } from "../../ipc/handlers";
+import { appendLog, publishStatus } from "../../ipc/handlers";
 import { saveDatabase } from "../../db/sqlite";
 import { listProjects } from "../../db/repositories/projects";
 import { createConflict, findOpenConflictByDestination } from "../../db/repositories/conflicts";
@@ -193,14 +193,33 @@ async function syncProject(project: ReturnType<typeof listProjects>[number]): Pr
 async function poll(): Promise<void> {
   if (running) return;
   running = true;
+  publishStatus({
+    state: "syncing",
+    message: "Syncing remote projects",
+    updatedAt: new Date().toISOString()
+  });
   const projects = listProjects();
+  let hadError = false;
   for (const project of projects) {
     try {
       await syncProject(project);
-    } catch (error) {
-      appendLog(createLog("warn", `Remote poll error: ${project.github_repo ?? project.id}`));
+    } catch (error: any) {
+      hadError = true;
+      publishStatus({
+        state: "error",
+        message: `Remote sync failed for ${project.github_repo ?? project.id}`,
+        updatedAt: new Date().toISOString()
+      });
+      appendLog(
+        createLog("warn", `Remote poll error: ${project.github_repo ?? project.id}`)
+      );
     }
   }
+  publishStatus({
+    state: hadError ? "error" : "ready",
+    message: hadError ? "Remote sync completed with errors" : "Remote sync complete",
+    updatedAt: new Date().toISOString()
+  });
   running = false;
 }
 

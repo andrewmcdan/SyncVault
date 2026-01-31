@@ -11,6 +11,9 @@ import type {
   RemoteFileItem,
   RemoteProjectItem,
   ProjectListItem,
+  ProjectFileListItem,
+  DeleteProjectOptions,
+  DeleteProjectResult,
   ConflictListItem,
   SyncSettings,
   LogEntry,
@@ -62,6 +65,15 @@ const api = {
     ipcRenderer.invoke(IPC_CHANNELS.PULL_FILE_COMMIT, payload),
   listProjects: (): Promise<ProjectListItem[]> =>
     ipcRenderer.invoke(IPC_CHANNELS.PROJECTS_LIST),
+  listProjectFiles: (projectId: string): Promise<ProjectFileListItem[]> =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROJECT_FILES_LIST, projectId),
+  deleteProject: (
+    projectId: string,
+    options: DeleteProjectOptions
+  ): Promise<DeleteProjectResult> =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROJECT_DELETE, projectId, options),
+  stopTrackingFile: (fileId: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC_CHANNELS.FILE_UNTRACK, fileId),
   getSyncSettings: (): Promise<SyncSettings> =>
     ipcRenderer.invoke(IPC_CHANNELS.SYNC_SETTINGS_GET),
   setSyncSettings: (payload: Partial<SyncSettings>): Promise<SyncSettings> =>

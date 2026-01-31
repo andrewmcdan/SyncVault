@@ -5,7 +5,8 @@ const DEFAULT_SETTINGS: SyncSettings = {
   pollIntervalMs: 20000,
   debounceMs: 300,
   loopWindowMs: 800,
-  refreshIntervalMs: 10000
+  refreshIntervalMs: 10000,
+  paused: false
 };
 
 export function getSyncSettings(): SyncSettings {

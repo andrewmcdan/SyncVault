@@ -6,6 +6,9 @@ import type {
   AwsProfileSelection,
   ConflictListItem,
   ProjectListItem,
+  ProjectFileListItem,
+  DeleteProjectOptions,
+  DeleteProjectResult,
   SyncSettings,
   GitHubTokenPayload,
   GitHubAuthStatus,
@@ -24,6 +27,7 @@ import { startSyncEngine, stopSyncEngine } from "../../services/sync/engine";
 import { listOpenConflicts, resolveConflict } from "../../db/repositories/conflicts";
 import { openDiff } from "../../services/conflicts/open-diff";
 import { listProjectSummaries } from "../../db/repositories/projects";
+import { listFilesByProject } from "../../db/repositories/files";
 import {
   resolveConflictKeepLocal,
   resolveConflictKeepRemote
@@ -40,8 +44,10 @@ import {
   setGitHubToken,
   getGitHubAuthMode
 } from "../../services/auth/github-auth";
+import { deleteProject, stopTrackingFile } from "../../services/projects";
 
 const statusSubscribers = new Set<WebContents>();
+const statusListeners = new Set<(status: SyncStatus) => void>();
 const logSubscribers = new Set<WebContents>();
 
 let currentStatus: SyncStatus = {
@@ -70,6 +76,18 @@ export function publishStatus(nextStatus: SyncStatus): void {
   for (const subscriber of statusSubscribers) {
     subscriber.send(IPC_CHANNELS.STATUS_EVENT, currentStatus);
   }
+  for (const listener of statusListeners) {
+    listener(currentStatus);
+  }
+}
+
+export function getCurrentStatus(): SyncStatus {
+  return currentStatus;
+}
+
+export function onStatusChange(listener: (status: SyncStatus) => void): () => void {
+  statusListeners.add(listener);
+  return () => statusListeners.delete(listener);
 }
 
 export function appendLog(entry: LogEntry): void {
@@ -197,6 +215,30 @@ export function registerIpcHandlers(): void {
       openConflicts: project.open_conflicts,
       createdAt: project.created_at
     }));
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.PROJECT_FILES_LIST,
+    (_event, projectId: string): ProjectFileListItem[] => {
+      return listFilesByProject(projectId).map((file) => ({
+        id: file.id,
+        sourceRelativePath: file.source_relative_path,
+        templatePath: file.template_path,
+        mappingPath: file.mapping_path,
+        destinationCount: file.destination_count,
+        updatedAt: file.updated_at
+      }));
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.PROJECT_DELETE,
+    async (_event, projectId: string, options: DeleteProjectOptions): Promise<DeleteProjectResult> =>
+      deleteProject(projectId, options)
+  );
+
+  ipcMain.handle(IPC_CHANNELS.FILE_UNTRACK, (_event, fileId: string) => {
+    return stopTrackingFile(fileId);
   });
 
   ipcMain.handle(IPC_CHANNELS.SYNC_SETTINGS_GET, (): SyncSettings => getSyncSettings());

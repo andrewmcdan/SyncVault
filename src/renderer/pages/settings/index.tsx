@@ -5,7 +5,8 @@ const defaultSyncSettings: SyncSettings = {
   pollIntervalMs: 20000,
   debounceMs: 300,
   loopWindowMs: 800,
-  refreshIntervalMs: 10000
+  refreshIntervalMs: 10000,
+  paused: false
 };
 
 const syncLimits = {
@@ -153,6 +154,24 @@ export default function SettingsPage(): JSX.Element {
     }
   };
 
+  const handleSyncToggle = async () => {
+    setIsBusy(true);
+    setSyncStatus(syncSettings.paused ? "Resuming sync..." : "Pausing sync...");
+    try {
+      const next = await window.syncvault?.setSyncSettings?.({
+        paused: !syncSettings.paused
+      });
+      if (next) {
+        setSyncSettingsState(next);
+      }
+      setSyncStatus(next?.paused ? "Sync paused." : "Sync running.");
+    } catch (error) {
+      setSyncStatus("Failed to update sync state.");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   return (
     <section className="settings">
       <h2>Settings</h2>
@@ -235,6 +254,19 @@ export default function SettingsPage(): JSX.Element {
 
       <div className="settings__section">
         <h3>Sync settings</h3>
+        <div className="settings__row">
+          <label>
+            Sync state
+            <div className="settings__inline">
+              <button type="button" onClick={handleSyncToggle} disabled={isBusy}>
+                {syncSettings.paused ? "Resume syncing" : "Pause syncing"}
+              </button>
+              <span className="muted">
+                {syncSettings.paused ? "Paused" : "Running"}
+              </span>
+            </div>
+          </label>
+        </div>
         <div className="settings__row">
           <label>
             Remote poll interval (seconds)

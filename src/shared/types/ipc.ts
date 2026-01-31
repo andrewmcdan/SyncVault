@@ -77,6 +77,26 @@ export interface ProjectListItem {
   createdAt: string | null;
 }
 
+export interface ProjectFileListItem {
+  id: string;
+  sourceRelativePath: string;
+  templatePath: string;
+  mappingPath: string;
+  destinationCount: number;
+  updatedAt: string | null;
+}
+
+export interface DeleteProjectOptions {
+  deleteRemoteFiles: boolean;
+  deleteRemoteRepo: boolean;
+  deleteSecrets: boolean;
+}
+
+export interface DeleteProjectResult {
+  ok: boolean;
+  warnings: string[];
+}
+
 export interface RemoteFileItem {
   fileId: string;
   templatePath: string;
@@ -94,6 +114,7 @@ export interface SyncSettings {
   debounceMs: number;
   loopWindowMs: number;
   refreshIntervalMs: number;
+  paused: boolean;
 }
 
 export interface ConflictListItem {

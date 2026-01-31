@@ -15,7 +15,12 @@ export default function HomePage(): JSX.Element {
   return (
     <section>
       {status ? (
-        <div className="status-pill">Status: {status.state} · {status.message}</div>
+        <div>
+          <div className="status-pill">Status: {status.state} · {status.message}</div>
+          <div className="muted" style={{ fontSize: "12px" }}>
+            Updated {new Date(status.updatedAt).toLocaleString()}
+          </div>
+        </div>
       ) : (
         <div className="status-pill status-pill--idle">Status: connecting...</div>
       )}

@@ -9,6 +9,9 @@ import type {
   RemoteFileItem,
   RemoteProjectItem,
   ProjectListItem,
+  ProjectFileListItem,
+  DeleteProjectOptions,
+  DeleteProjectResult,
   ConflictListItem,
   SyncSettings,
   LogEntry,
@@ -35,6 +38,12 @@ declare global {
       listPullFiles: (owner: string, repo: string) => Promise<RemoteFileItem[]>;
       pullFile: (payload: PullFilePayload) => Promise<string>;
       listProjects: () => Promise<ProjectListItem[]>;
+      listProjectFiles: (projectId: string) => Promise<ProjectFileListItem[]>;
+      deleteProject: (
+        projectId: string,
+        options: DeleteProjectOptions
+      ) => Promise<DeleteProjectResult>;
+      stopTrackingFile: (fileId: string) => Promise<{ ok: boolean }>;
       getSyncSettings: () => Promise<SyncSettings>;
       setSyncSettings: (payload: Partial<SyncSettings>) => Promise<SyncSettings>;
       listConflicts: () => Promise<ConflictListItem[]>;

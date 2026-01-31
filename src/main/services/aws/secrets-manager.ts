@@ -2,7 +2,8 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
   PutSecretValueCommand,
-  CreateSecretCommand
+  CreateSecretCommand,
+  DeleteSecretCommand
 } from "@aws-sdk/client-secrets-manager";
 
 function getClient(region: string): SecretsManagerClient {
@@ -57,4 +58,14 @@ export async function upsertSecretJson(
     }
     throw error;
   }
+}
+
+export async function deleteSecret(secretId: string, region: string): Promise<void> {
+  const client = getClient(region);
+  await client.send(
+    new DeleteSecretCommand({
+      SecretId: secretId,
+      ForceDeleteWithoutRecovery: true
+    })
+  );
 }

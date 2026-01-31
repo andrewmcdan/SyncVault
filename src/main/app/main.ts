@@ -1,27 +1,58 @@
 import { app, Menu, Tray, nativeImage, type Event as AppEvent } from "electron";
 import { closeDatabase, initDatabase } from "../db/sqlite";
 import { addFileFromClipboard } from "../services/add-file";
-import { registerIpcHandlers } from "../ipc/handlers";
+import type { SyncStatus } from "../../shared/types";
+import { getCurrentStatus, onStatusChange, registerIpcHandlers } from "../ipc/handlers";
 import { showMainWindow } from "../windows/main-window";
 import { resolveAssetPath } from "../util/paths";
 import { startSyncEngine, stopSyncEngine } from "../services/sync/engine";
+import { getSyncSettings, setSyncSettings } from "../services/sync/settings";
 import { detectGitHubAuthMode } from "../services/auth/github-auth";
 
 let tray: Tray | null = null;
+let currentStatus: SyncStatus = {
+  state: "ready",
+  message: "Ready",
+  updatedAt: new Date().toISOString()
+};
+
+function formatStatusLabel(status: SyncStatus): string {
+  const label =
+    status.state === "syncing" ? "Syncing" : status.state === "error" ? "Error" : "Ready";
+  const message =
+    status.message && status.message !== label ? ` · ${status.message}` : "";
+  return `Status: ${label}${message}`;
+}
 
 function buildTrayMenu(): Menu {
   return Menu.buildFromTemplate([
-    { label: "Status: Ready", enabled: false },
+    { label: formatStatusLabel(currentStatus), enabled: false },
     { type: "separator" },
     { label: "Add file from clipboard", click: () => { void addFileFromClipboard().catch((error) => console.error(error)); } },
     { label: "Add file (browse)", click: () => showMainWindow("add-file") },
     { label: "Pull file from remote", click: () => showMainWindow("pull-file") },
     { type: "separator" },
+    { label: "Home...", click: () => showMainWindow() },
     { label: "Projects...", click: () => showMainWindow("projects") },
     { label: "Conflicts...", click: () => showMainWindow("conflicts") },
     { label: "Logs...", click: () => showMainWindow("logs") },
     { type: "separator" },
-    { label: "Pause syncing", type: "checkbox", checked: false, click: () => {} },
+    {
+      label: "Pause syncing",
+      type: "checkbox",
+      checked: getSyncSettings().paused,
+      click: (menuItem) => {
+        const next = setSyncSettings({ paused: menuItem.checked });
+        if (next.paused) {
+          void stopSyncEngine();
+        } else {
+          startSyncEngine();
+        }
+        if (tray) {
+          tray.setContextMenu(buildTrayMenu());
+        }
+      }
+    },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() },
   ]);
@@ -65,6 +96,13 @@ async function start(): Promise<void> {
   }
 
   registerIpcHandlers();
+  currentStatus = getCurrentStatus();
+  onStatusChange((status) => {
+    currentStatus = status;
+    if (tray) {
+      tray.setContextMenu(buildTrayMenu());
+    }
+  });
   registerAppHandlers();
   try {
     await detectGitHubAuthMode();
